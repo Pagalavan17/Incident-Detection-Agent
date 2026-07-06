@@ -1,0 +1,72 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────────
+  // tsconfig.json — Type-checking only (no emit)
+  //
+  // PURPOSE:
+  //   Used by the IDE and `npm run typecheck` (tsc --noEmit).
+  //   Intentionally does NOT emit compiled output — that job belongs to
+  //   tsconfig.build.json which is used by `npm run build`.
+  //
+  // DECISIONS:
+  //   • target ES2022          — native top-level await, class fields, structuredClone
+  //   • moduleResolution bundler — correct for ESM + modern tooling (tsx, Vite, etc.)
+  //   • noEmit true            — this config is type-check only
+  //   • strict + extra flags   — production-grade type safety
+  //   • exactOptionalPropertyTypes — prevents assigning `undefined` to optional props
+  //   • noUncheckedIndexedAccess  — array/record access returns T | undefined (safer)
+  // ─────────────────────────────────────────────────────────────────────────────
+  "compilerOptions": {
+    // ── Language & Environment ──────────────────────────────────────────────────
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // ── Path Mapping ────────────────────────────────────────────────────────────
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "rootDir": "src",
+    "outDir": "dist",
+
+    // ── Emit Control ────────────────────────────────────────────────────────────
+    // noEmit is true in this config; tsconfig.build.json sets it to false.
+    // declaration/sourceMap are omitted here — they only apply during actual emit.
+    "noEmit": true,
+
+
+    // ── Module Interop ──────────────────────────────────────────────────────────
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+
+    // ── Strict Mode ─────────────────────────────────────────────────────────────
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": true,
+
+    // ── Unused Code Hygiene ──────────────────────────────────────────────────────
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // ── Experimental ────────────────────────────────────────────────────────────
+    // Required for Mastra decorators and Zod integration
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // ── Correctness ─────────────────────────────────────────────────────────────
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}

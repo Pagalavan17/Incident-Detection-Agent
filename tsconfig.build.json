@@ -1,0 +1,26 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────────
+  // tsconfig.build.json — Production emit config
+  //
+  // PURPOSE:
+  //   Extends the base tsconfig.json but enables JS/declaration output.
+  //   Used exclusively by `npm run build` (tsc --project tsconfig.build.json).
+  //
+  // SEPARATION RATIONALE:
+  //   Keeping emit settings in a separate file means the IDE and typecheck
+  //   script never accidentally produce artefacts in the dist/ directory.
+  // ─────────────────────────────────────────────────────────────────────────────
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Override: emit compiled output for production deployments
+    "noEmit": false,
+    // Cannot use allowImportingTsExtensions when emitting
+    "allowImportingTsExtensions": false,
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
+}
