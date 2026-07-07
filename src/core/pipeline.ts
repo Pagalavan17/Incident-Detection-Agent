@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/core/pipeline.ts
  *
  * PURPOSE:
@@ -43,26 +43,26 @@ import type {
   EpochMs,
   IncidentId,
   Result,
-} from "../types/common.ts";
-import { isErr, makeError } from "../types/common.ts";
+} from "../types/common";
+import { isErr, makeError } from "../types/common";
 import type {
   IWorkflowStep,
   StepResult,
   WorkflowContext,
   WorkflowInput,
   WorkflowOutput,
-} from "../contracts/workflow.contract.ts";
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import { recordError, recordStep, updateIncidentContext } from "../models/IncidentContext.ts";
-import type { IncidentLifecycle } from "../contracts/incident.contract.ts";
-import { validateTransition } from "../contracts/incident.contract.ts";
-import type { IncidentEventEmitter } from "../events/incident.events.ts";
+} from "../contracts/workflow.contract";
+import type { IncidentContext } from "../models/IncidentContext";
+import { recordError, recordStep, updateIncidentContext } from "../models/IncidentContext";
+import type { IncidentLifecycle } from "../contracts/incident.contract";
+import { validateTransition } from "../contracts/incident.contract";
+import type { IncidentEventEmitter } from "../events/incident.events";
 import {
   makeStepCompletedEvent,
   makeStepFailedEvent,
   makeStepStartedEvent,
-} from "../events/incident.events.ts";
-import { PipelineStepStatus } from "../constants/pipeline.constants.ts";
+} from "../events/incident.events";
+import { PipelineStepStatus } from "../constants/pipeline.constants";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Pipeline Options

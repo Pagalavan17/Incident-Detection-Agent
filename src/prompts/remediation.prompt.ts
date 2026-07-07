@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/prompts/remediation.prompt.ts
  *
  * PURPOSE:
@@ -6,9 +6,9 @@
  *   Keeps LLM prompt construction separated from the execution and orchestrating services.
  */
 
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import type { RootCauseAnalysis } from "../types/root-cause.ts";
-import type { IncidentContextWithAnomalies } from "../services/anomaly/anomaly-types.ts";
+import type { IncidentContext } from "../models/IncidentContext";
+import type { RootCauseAnalysis } from "../types/root-cause";
+import type { IncidentContextWithAnomalies } from "../services/anomaly/anomaly-types";
 
 /**
  * Compiles a detailed, structured prompt for the Remediation Recommendation LLM/Agent.

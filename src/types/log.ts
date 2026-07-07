@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/types/log.ts
  *
  * PURPOSE:
@@ -27,7 +27,7 @@ import type {
   EpochMs,
   ISODateString,
   Severity,
-} from "./common.ts";
+} from "./common";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Log Source Enum

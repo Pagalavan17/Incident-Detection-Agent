@@ -1,17 +1,17 @@
-/**
+﻿/**
  * src/services/qdrant/qdrant-service.ts
  *
  * PURPOSE:
  *   Handles Qdrant search, upsert, and delete operations.
  */
 
-import { qdrantClient } from "./qdrant-client.ts";
-import { collectionManager } from "./collection-manager.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import { qdrantClient } from "./qdrant-client";
+import { collectionManager } from "./collection-manager";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 import {
   PAYLOAD_SCHEMA_VERSION,
-} from "../../constants/qdrant.constants.ts";
+} from "../../constants/qdrant.constants";
 
 export interface QdrantUpsertPoint {
   readonly incidentId: string;

@@ -3,13 +3,20 @@
  *
  * PURPOSE:
  *   Single source of truth for all environment variables.
- *   Loads .env via dotenv, validates every required value with Zod at startup,
- *   and exports a deeply frozen, fully-typed `env` object.
+ *   Loads .env via dotenv, validates configuration with Zod, and exports a
+ *   typed, frozen `env` object.
  *
- *   If ANY required variable is missing or invalid, the process exits with a
- *   clear, actionable error message before any application logic runs.
- *   This is the "fail fast at boot" pattern — misconfiguration is caught
- *   immediately, not hours into a production incident.
+ * STARTUP BEHAVIOR (two-tier validation):
+ *
+ *   TIER 1 — Core settings (PORT, NODE_ENV):
+ *     Validated eagerly at startup. The process exits immediately if these are
+ *     missing or invalid. The server CANNOT run without them.
+ *
+ *   TIER 2 — Provider settings (API keys, QDRANT_URL):
+ *     Parsed at startup but NOT required. Missing keys do not prevent the
+ *     server from starting. Each service validates its own required key at
+ *     call-time and returns a typed AppError if the key is absent.
+ *     This enables local development without all provider credentials.
  *
  * DESIGN DECISIONS:
  *   • Zod 4 schema              — validates types, coerces strings to numbers,
@@ -20,6 +27,8 @@
  *     `process.env` (untyped, mutable). This is enforced by convention.
  *   • Helper getters            — isDevelopment(), isProduction() etc. keep
  *     conditional logic readable in consumers.
+ *   • isProviderConfigured()    — services call this to produce a typed
+ *     AppError rather than crashing when a key is absent.
  *   • Isolation                 — this file imports NOTHING from the domain.
  *     It depends only on dotenv and zod. The domain depends on this.
  *
@@ -37,11 +46,11 @@ import {
   DEFAULT_ANTHROPIC_MODEL,
   DEFAULT_OPENAI_EMBEDDING_MODEL,
   LARGE_OPENAI_EMBEDDING_MODEL,
-} from "../constants/app.constants.ts";
+} from "../constants/app.constants";
 import {
   DEFAULT_QDRANT_URL,
   QdrantCollections,
-} from "../constants/qdrant.constants.ts";
+} from "../constants/qdrant.constants";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Load .env File
@@ -55,16 +64,14 @@ import {
 loadDotEnv();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 2. Zod Schema Definition
+// § 2. Tier 1 — Core Schema (fail-fast)
 //
-//   Each field documents its source, purpose, and default.
-//   Required fields have no default and will produce a validation error if absent.
-//   Optional fields have sensible production-safe defaults.
+//   Only the fields without which the HTTP server literally cannot run.
+//   A validation failure here exits the process immediately with a clear
+//   error message. No service-level logic can substitute for these.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const envSchema = z.object({
-  // ── Application ──────────────────────────────────────────────────────────
-
+const coreSchema = z.object({
   /**
    * Runtime environment selector.
    * Controls log format (JSON vs pretty), error detail verbosity, etc.
@@ -79,49 +86,100 @@ const envSchema = z.object({
    */
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 
-  // ── AI Model Providers ────────────────────────────────────────────────────
+  /**
+   * Service name reported to the OTLP backend.
+   */
+  OTEL_SERVICE_NAME: z.string().min(1).default(APP_NAME),
 
   /**
+   * Enable automatic execution of APPROVED remediation actions.
+   */
+  ENABLE_AUTO_REMEDIATION: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
+  /**
+   * Name of the Qdrant collection that stores historical incident vectors.
+   */
+  QDRANT_COLLECTION_NAME: z
+    .string()
+    .min(1)
+    .default(QdrantCollections.PAST_INCIDENTS),
+
+  /**
+   * OpenAI embedding model to use.
+   */
+  OPENAI_EMBEDDING_MODEL: z
+    .enum([DEFAULT_OPENAI_EMBEDDING_MODEL, LARGE_OPENAI_EMBEDDING_MODEL])
+    .default(DEFAULT_OPENAI_EMBEDDING_MODEL),
+
+  /**
+   * Anthropic Claude model identifier.
+   */
+  ANTHROPIC_MODEL: z.string().min(1).default(DEFAULT_ANTHROPIC_MODEL),
+});
+
+const coreResult = coreSchema.safeParse(process.env);
+
+if (!coreResult.success) {
+  const issues = coreResult.error.issues
+    .map((issue) => `  • ${issue.path.join(".")}: ${issue.message}`)
+    .join("\n");
+  console.error("❌ Core environment validation failed:\n" + issues);
+  console.error(
+    "\nFix the issues above and restart. See .env.example for reference."
+  );
+  process.exit(1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 3. Tier 2 — Provider Schema (best-effort, no process.exit)
+//
+//   API keys and external service URLs are desirable but not required to start
+//   the server. Each individual service validates its own key at call-time
+//   and returns Err(AppError) with code ENV_VALIDATION_FAILED when absent.
+//
+//   Keys are validated for format IF present, but presence itself is optional.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const providerSchema = z.object({
+  /**
    * Anthropic Claude API key.
-   * Used by the LLM service for RCA and post-mortem generation.
+   * Required by: root-cause, remediation, guardrails, post-mortem agents.
    * Obtain at: https://console.anthropic.com/
    */
   ANTHROPIC_API_KEY: z
     .string()
-    .min(1, "ANTHROPIC_API_KEY must not be empty")
+    .min(1)
     .startsWith("sk-ant-", {
       message: "ANTHROPIC_API_KEY must start with 'sk-ant-'",
-    }),
+    })
+    .optional(),
 
   /**
    * OpenAI API key.
-   * Used by the embeddings service (text-embedding-3-small).
+   * Required by: embeddings service (text-embedding-3-small).
    * Obtain at: https://platform.openai.com/api-keys
    */
   OPENAI_API_KEY: z
     .string()
-    .min(1, "OPENAI_API_KEY must not be empty")
+    .min(1)
     .startsWith("sk-", {
       message: "OPENAI_API_KEY must start with 'sk-'",
-    }),
-
-  // ── Safety Layer ──────────────────────────────────────────────────────────
+    })
+    .optional(),
 
   /**
    * Enkrypt AI Guardrails API key.
-   * Used to validate LLM-generated remediation actions before execution.
+   * Required by: guardrails validation service.
    * Obtain at: https://enkryptai.com/
    */
-  ENKRYPTAI_GUARDRAILS_API_KEY: z
-    .string()
-    .min(1, "ENKRYPTAI_GUARDRAILS_API_KEY must not be empty"),
-
-  // ── Vector Database ───────────────────────────────────────────────────────
+  ENKRYPTAI_GUARDRAILS_API_KEY: z.string().min(1).optional(),
 
   /**
    * Qdrant REST API base URL.
-   * Local development: http://localhost:6333
-   * Qdrant Cloud:      https://<cluster-id>.<region>.aws.cloud.qdrant.io
+   * Has a sensible local-dev default — absence does not block startup.
    */
   QDRANT_URL: z
     .url({ message: "QDRANT_URL must be a valid URL" })
@@ -133,116 +191,126 @@ const envSchema = z.object({
    */
   QDRANT_API_KEY: z.string().optional(),
 
-  // ── OpenTelemetry ─────────────────────────────────────────────────────────
-
   /**
    * OTLP HTTP endpoint for trace export.
-   * Examples: http://localhost:4318 (Jaeger), https://tempo.grafana.com
-   * Leave unset to disable trace export (traces still collected in memory).
    */
-  OTEL_EXPORTER_OTLP_ENDPOINT: z
-    .url()
-    .optional(),
-
-  /**
-   * Service name reported to the OTLP backend.
-   * Appears in trace UIs as the service identifier.
-   */
-  OTEL_SERVICE_NAME: z
-    .string()
-    .min(1)
-    .default(APP_NAME),
-
-  // ── Feature Flags ─────────────────────────────────────────────────────────
-
-  /**
-   * Enable automatic execution of APPROVED remediation actions.
-   * When false (default), approved actions are logged but not executed.
-   * Set to "true" only in environments where auto-remediation is safe.
-   */
-  ENABLE_AUTO_REMEDIATION: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((v) => v === "true"),
-
-  /**
-   * Name of the Qdrant collection that stores historical incident vectors.
-   * Defaults to the canonical PAST_INCIDENTS collection name.
-   */
-  QDRANT_COLLECTION_NAME: z
-    .string()
-    .min(1)
-    .default(QdrantCollections.PAST_INCIDENTS),
-
-  /**
-   * OpenAI embedding model to use.
-   * See app.constants.ts for available model identifiers and dimensions.
-   */
-  OPENAI_EMBEDDING_MODEL: z
-    .enum([DEFAULT_OPENAI_EMBEDDING_MODEL, LARGE_OPENAI_EMBEDDING_MODEL])
-    .default(DEFAULT_OPENAI_EMBEDDING_MODEL),
-
-  /**
-   * Anthropic Claude model identifier for RCA and post-mortem generation.
-   * See app.constants.ts for the canonical model identifier.
-   */
-  ANTHROPIC_MODEL: z
-    .string()
-    .min(1)
-    .default(DEFAULT_ANTHROPIC_MODEL),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// § 3. Parse & Validate
-//
-//   safeParse() returns a discriminated union — we check .success before
-//   accessing .data. If invalid, we print every error path and exit with
-//   code 1 so the process never starts with broken config.
-// ─────────────────────────────────────────────────────────────────────────────
+// Parse provider config; never exit on failure — log warnings only.
+const providerResult = providerSchema.safeParse(process.env);
 
-const parseResult = envSchema.safeParse(process.env);
-
-if (!parseResult.success) {
-  // Format each Zod issue into a readable line.
-  const issues = parseResult.error.issues
-    .map((issue) => `  • ${issue.path.join(".")}: ${issue.message}`)
-    .join("\n");
-
-  // Use console.error here explicitly — the Pino logger is not yet available
-  // at config load time (it depends on env.NODE_ENV).
-  console.error("❌ Environment validation failed:\n" + issues);
-  console.error(
-    "\nFix the issues above and restart. See .env.example for reference."
-  );
-  process.exit(1);
-}
+const providerEnv = providerResult.success
+  ? providerResult.data
+  : (() => {
+      // Log format issues as warnings (not errors) — server still starts.
+      const issues = providerResult.error.issues
+        .map((i) => `  ⚠  ${i.path.join(".")}: ${i.message}`)
+        .join("\n");
+      console.warn(
+        "⚠  Provider environment validation warnings (server will still start):\n" +
+        issues +
+        "\n   Some AI features will be unavailable until keys are configured.\n"
+      );
+      // Return safe defaults: all optional fields undefined, QDRANT_URL with default.
+      return {
+        ANTHROPIC_API_KEY: undefined,
+        OPENAI_API_KEY: undefined,
+        ENKRYPTAI_GUARDRAILS_API_KEY: undefined,
+        QDRANT_URL: DEFAULT_QDRANT_URL,
+        QDRANT_API_KEY: undefined,
+        OTEL_EXPORTER_OTLP_ENDPOINT: undefined,
+      } as z.infer<typeof providerSchema>;
+    })();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 4. Export Typed, Frozen Environment
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * The inferred TypeScript type of the validated environment object.
- * Import this type when you need to type-annotate env in services.
- */
-export type Env = z.infer<typeof envSchema>;
+/** The merged, fully-typed environment shape. */
+export type Env = z.infer<typeof coreSchema> & z.infer<typeof providerSchema>;
 
 /**
  * The validated, typed, deeply frozen environment configuration.
  *
- * USAGE:
- *   import { env } from '../config/env.ts';
- *   const client = new QdrantClient({ url: env.QDRANT_URL });
+ * Provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, ENKRYPTAI_GUARDRAILS_API_KEY)
+ * are typed as `string | undefined`. Services MUST call `requireProviderKey()`
+ * (or their own equivalent guard) before using these values.
  *
- * This object is frozen — mutating any field will throw in strict mode.
+ * USAGE:
+ *   import { env } from '../config/env';
+ *   const url = env.QDRANT_URL; // always a string
+ *   const key = env.ANTHROPIC_API_KEY; // string | undefined
  */
-export const env: Readonly<Env> = Object.freeze(parseResult.data);
+export const env: Readonly<Env> = Object.freeze({
+  ...coreResult.data,
+  ...providerEnv,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 5. Environment Helper Functions
+// § 5. Provider Configuration Helpers
 //
-//   These small helpers eliminate scattered `env.NODE_ENV === "..."` checks
-//   throughout the codebase and make conditionals read like English.
+//   Services call these at call-time (not module load) to check whether their
+//   required provider is configured. Returns the key string or throws a
+//   typed AppError that callers can wrap in Err().
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Describes which external provider services have their keys configured.
+ * Exported for the /ready health endpoint.
+ */
+export interface ProviderStatus {
+  readonly anthropic: boolean;
+  readonly openai: boolean;
+  readonly enkrypt: boolean;
+  readonly qdrant: boolean;
+}
+
+/**
+ * Returns a snapshot of which providers are currently configured.
+ * Does NOT test connectivity — only checks key presence.
+ */
+export const getProviderStatus = (): ProviderStatus => ({
+  anthropic: env.ANTHROPIC_API_KEY !== undefined,
+  openai: env.OPENAI_API_KEY !== undefined,
+  enkrypt: env.ENKRYPTAI_GUARDRAILS_API_KEY !== undefined,
+  // Qdrant always has a URL (default), but flag it only if explicitly set
+  qdrant: env.QDRANT_URL !== undefined,
+});
+
+/**
+ * Assert that a named provider key is configured.
+ * Returns the key string on success.
+ * Throws a plain object matching AppError shape on failure.
+ *
+ * Services call this at the TOP of every async method that needs the key:
+ *
+ * @example
+ *   const key = requireProviderKey("ANTHROPIC_API_KEY", "Anthropic");
+ *   // key is string (not undefined) past this point
+ */
+export const requireProviderKey = (
+  keyName: keyof Pick<
+    Env,
+    "ANTHROPIC_API_KEY" | "OPENAI_API_KEY" | "ENKRYPTAI_GUARDRAILS_API_KEY"
+  >,
+  providerLabel: string
+): string => {
+  const value = env[keyName];
+  if (value === undefined) {
+    throw {
+      code: "ENV_VALIDATION_FAILED" as const,
+      message:
+        `${providerLabel} is not configured. ` +
+        `Set the ${keyName} environment variable to enable this feature. ` +
+        `See .env.example for reference.`,
+    };
+  }
+  return value;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 6. Environment Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Returns true when running in local development mode. */

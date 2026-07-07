@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/models/IncidentContext.ts
  *
  * PURPOSE:
@@ -37,15 +37,15 @@ import type {
   Priority,
   RunId,
   Severity,
-} from "../types/common.ts";
-import type { NormalisedLogEntry, ParsedLogBatch } from "../types/log.ts";
+} from "../types/common";
+import type { NormalisedLogEntry, ParsedLogBatch } from "../types/log";
 import type {
   AnomalySignal,
   IncidentLifecycle,
   RemediationAction,
   RootCauseAnalysis,
   SimilarIncident,
-} from "../contracts/incident.contract.ts";
+} from "../contracts/incident.contract";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Pipeline Step Record

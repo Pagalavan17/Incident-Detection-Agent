@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/contracts/incident.contract.ts
  *
  * PURPOSE:
@@ -40,8 +40,8 @@ import type {
   Result,
   RunId,
   Severity,
-} from "../types/common.ts";
-import type { NormalisedLogEntry, ParsedLogBatch } from "../types/log.ts";
+} from "../types/common";
+import type { NormalisedLogEntry, ParsedLogBatch } from "../types/log";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Incident Lifecycle — Finite State Machine

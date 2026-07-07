@@ -1,14 +1,14 @@
-/**
+﻿/**
  * src/services/anomaly/anomaly-types.ts
  *
  * PURPOSE:
  *   Defines the types and interfaces for the rule-based anomaly detection service.
  */
 
-import type { NormalisedLogEntry } from "../../types/log.ts";
-import type { AnomalySignal } from "../../contracts/incident.contract.ts";
-import type { AnomalyThresholds } from "../../constants/anomaly-thresholds.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
+import type { NormalisedLogEntry } from "../../types/log";
+import type { AnomalySignal } from "../../contracts/incident.contract";
+import type { AnomalyThresholds } from "../../constants/anomaly-thresholds";
+import type { IncidentContext } from "../../models/IncidentContext";
 
 /**
  * Interface representing a deterministic operational anomaly detection rule.

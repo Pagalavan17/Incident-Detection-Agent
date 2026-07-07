@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/enkrypt/guardrails.service.ts
  *
  * PURPOSE:
@@ -6,14 +6,14 @@
  *   remediation plan and invoking the abstract guardrails agent.
  */
 
-import type { IGuardrailsAgent, ValidationResult } from "../../types/guardrails.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
-import type { RootCauseAnalysis } from "../../types/root-cause.ts";
-import type { RemediationPlan } from "../../types/remediation.ts";
-import { buildGuardrailsPrompt } from "../../prompts/guardrails.prompt.ts";
-import { guardrailsAgent } from "../../mastra/agents/guardrails.agent.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import type { IGuardrailsAgent, ValidationResult } from "../../types/guardrails";
+import type { IncidentContext } from "../../models/IncidentContext";
+import type { RootCauseAnalysis } from "../../types/root-cause";
+import type { RemediationPlan } from "../../types/remediation";
+import { buildGuardrailsPrompt } from "../../prompts/guardrails.prompt";
+import { guardrailsAgent } from "../../mastra/agents/guardrails.agent";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 
 export class GuardrailsService {
   /**

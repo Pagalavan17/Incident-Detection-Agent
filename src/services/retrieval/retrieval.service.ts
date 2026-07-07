@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/retrieval/retrieval.service.ts
  *
  * PURPOSE:
@@ -6,15 +6,15 @@
  *   Uses constructor injection to remain provider-agnostic.
  */
 
-import type { IEmbeddingService } from "../embeddings/embedding.service.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
-import type { SimilarIncident } from "../../contracts/incident.contract.ts";
+import type { IEmbeddingService } from "../embeddings/embedding.service";
+import type { IncidentContext } from "../../models/IncidentContext";
+import type { SimilarIncident } from "../../contracts/incident.contract";
 import type {
   Result,
   AppError,
   IncidentId,
   ISODateString,
-} from "../../types/common.ts";
+} from "../../types/common";
 import {
   ok,
   err,
@@ -23,11 +23,11 @@ import {
   toISODateString,
   epochMsToDate,
   nowEpochMs,
-} from "../../types/common.ts";
-import { PRIMARY_COLLECTION_NAME } from "../../constants/qdrant.constants.ts";
-import { embeddingService } from "../embeddings/embedding.service.ts";
-import { qdrantService } from "../qdrant/qdrant-service.ts";
-import type { QdrantService, QdrantSearchResult } from "../qdrant/qdrant-service.ts";
+} from "../../types/common";
+import { PRIMARY_COLLECTION_NAME } from "../../constants/qdrant.constants";
+import { embeddingService } from "../embeddings/embedding.service";
+import { qdrantService } from "../qdrant/qdrant-service";
+import type { QdrantService, QdrantSearchResult } from "../qdrant/qdrant-service";
 
 /**
  * The standard retrieval response output format.

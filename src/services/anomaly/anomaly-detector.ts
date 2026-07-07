@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/anomaly/anomaly-detector.ts
  *
  * PURPOSE:
@@ -13,13 +13,13 @@
  *   • Overloaded API to accept either raw normalized log lists or full incident contexts.
  */
 
-import type { NormalisedLogEntry } from "../../types/log.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
-import type { AnomalySignal } from "../../contracts/incident.contract.ts";
-import type { AnomalyThresholds } from "../../constants/anomaly-thresholds.ts";
-import { DEFAULT_ANOMALY_THRESHOLDS } from "../../constants/anomaly-thresholds.ts";
-import { ALL_RULES } from "./anomaly-rules.ts";
-import type { IncidentContextWithAnomalies } from "./anomaly-types.ts";
+import type { NormalisedLogEntry } from "../../types/log";
+import type { IncidentContext } from "../../models/IncidentContext";
+import type { AnomalySignal } from "../../contracts/incident.contract";
+import type { AnomalyThresholds } from "../../constants/anomaly-thresholds";
+import { DEFAULT_ANOMALY_THRESHOLDS } from "../../constants/anomaly-thresholds";
+import { ALL_RULES } from "./anomaly-rules";
+import type { IncidentContextWithAnomalies } from "./anomaly-types";
 
 export class AnomalyDetector {
   private readonly thresholds: AnomalyThresholds;

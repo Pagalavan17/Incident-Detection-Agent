@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/anomaly/anomaly-rules.ts
  *
  * PURPOSE:
@@ -7,12 +7,12 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { Severity, toEpochMs } from "../../types/common.ts";
-import { AnomalyType } from "../../contracts/incident.contract.ts";
-import type { AnomalySignal } from "../../contracts/incident.contract.ts";
-import type { NormalisedLogEntry } from "../../types/log.ts";
-import type { AnomalyThresholds } from "../../constants/anomaly-thresholds.ts";
-import type { AnomalyRule } from "./anomaly-types.ts";
+import { Severity, toEpochMs } from "../../types/common";
+import { AnomalyType } from "../../contracts/incident.contract";
+import type { AnomalySignal } from "../../contracts/incident.contract";
+import type { NormalisedLogEntry } from "../../types/log";
+import type { AnomalyThresholds } from "../../constants/anomaly-thresholds";
+import type { AnomalyRule } from "./anomaly-types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. High CPU Rule

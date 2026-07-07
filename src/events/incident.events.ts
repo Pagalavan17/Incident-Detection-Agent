@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/events/incident.events.ts
  *
  * PURPOSE:
@@ -30,9 +30,9 @@
  */
 
 import { EventEmitter } from "node:events";
-import type { AppError, CorrelationId, EpochMs, IncidentId, RunId } from "../types/common.ts";
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import type { IncidentLifecycle } from "../contracts/incident.contract.ts";
+import type { AppError, CorrelationId, EpochMs, IncidentId, RunId } from "../types/common";
+import type { IncidentContext } from "../models/IncidentContext";
+import type { IncidentLifecycle } from "../contracts/incident.contract";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Event Type Enum

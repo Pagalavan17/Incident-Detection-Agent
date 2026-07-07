@@ -1,18 +1,18 @@
-/**
+﻿/**
  * src/services/qdrant/collection-manager.ts
  *
  * PURPOSE:
  *   Handles Qdrant collection existence checks and creation.
  */
 
-import { qdrantClient } from "./qdrant-client.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import { qdrantClient } from "./qdrant-client";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 import {
   DEFAULT_VECTOR_SIZE,
   DEFAULT_DISTANCE,
-} from "../../constants/qdrant.constants.ts";
-import type { QdrantDistance } from "../../constants/qdrant.constants.ts";
+} from "../../constants/qdrant.constants";
+import type { QdrantDistance } from "../../constants/qdrant.constants";
 
 export class CollectionManager {
   private readonly client = qdrantClient;

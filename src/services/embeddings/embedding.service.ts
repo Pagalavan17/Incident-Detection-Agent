@@ -7,9 +7,9 @@
  */
 
 import OpenAI from "openai";
-import { env } from "../../config/env.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import { env, requireProviderKey } from "../../config/env";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 
 /**
  * Interface representing a pluggable embedding provider.
@@ -94,45 +94,86 @@ export class EmbeddingService implements IEmbeddingService {
 
   /**
    * Retrieve embedding for a single text input.
+   *
+   * Returns Err(AppError) with code ENV_VALIDATION_FAILED if OPENAI_API_KEY
+   * is not configured, or EMBEDDING_FAILED if the API call itself fails.
    */
   async getEmbedding(text: string): Promise<Result<number[], AppError>> {
     try {
       const vector = await this.provider.embed(text);
       return ok(vector);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isAppErrorShape =
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        "message" in error;
+      if (isAppErrorShape) {
+        // Re-wrap AppError-shaped throws from requireProviderKey.
+        return err(error as AppError);
+      }
+      const msg = error instanceof Error ? error.message : String(error);
       return err(
-        makeError("EMBEDDING_FAILED", error.message || String(error), {
-          cause: error,
-          context: { text },
-        })
+        makeError("EMBEDDING_FAILED", msg, { context: { text } })
       );
     }
   }
 
   /**
    * Retrieve embeddings for multiple text inputs.
+   *
+   * Returns Err(AppError) with code ENV_VALIDATION_FAILED if OPENAI_API_KEY
+   * is not configured, or EMBEDDING_FAILED if the API call itself fails.
    */
   async getEmbeddings(texts: string[]): Promise<Result<number[][], AppError>> {
     try {
       const vectors = await this.provider.embedBatch(texts);
       return ok(vectors);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isAppErrorShape =
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        "message" in error;
+      if (isAppErrorShape) {
+        return err(error as AppError);
+      }
+      const msg = error instanceof Error ? error.message : String(error);
       return err(
-        makeError("EMBEDDING_FAILED", error.message || String(error), {
-          cause: error,
-          context: { texts },
-        })
+        makeError("EMBEDDING_FAILED", msg, { context: { texts } })
       );
     }
   }
 }
 
 /**
- * Default instances pre-configured for OpenAI.
+ * Lazy singleton for the default OpenAI embedding provider.
+ *
+ * The provider is NOT created at module load time. It is created on first
+ * use inside a closure so that a missing OPENAI_API_KEY at startup does not
+ * crash the process. requireProviderKey() inside OpenAIEmbeddingProvider's
+ * lazy factory throws an AppError-shaped object that EmbeddingService catches
+ * and converts to Err(AppError).
  */
-export const defaultEmbeddingProvider = new OpenAIEmbeddingProvider(
-  env.OPENAI_API_KEY,
-  env.OPENAI_EMBEDDING_MODEL
-);
+class LazyOpenAIEmbeddingProvider implements EmbeddingProvider {
+  private inner: OpenAIEmbeddingProvider | undefined;
 
+  private resolve(): OpenAIEmbeddingProvider {
+    if (this.inner !== undefined) return this.inner;
+    // Throws AppError-shaped object if OPENAI_API_KEY is absent.
+    const apiKey = requireProviderKey("OPENAI_API_KEY", "OpenAI Embeddings");
+    this.inner = new OpenAIEmbeddingProvider(apiKey, env.OPENAI_EMBEDDING_MODEL);
+    return this.inner;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    return this.resolve().embed(text);
+  }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    return this.resolve().embedBatch(texts);
+  }
+}
+
+export const defaultEmbeddingProvider = new LazyOpenAIEmbeddingProvider();
 export const embeddingService = new EmbeddingService(defaultEmbeddingProvider);

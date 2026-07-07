@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/prompts/root-cause.prompt.ts
  *
  * PURPOSE:
@@ -6,9 +6,9 @@
  *   Keeps LLM prompt construction separated from the execution and orchestrating services.
  */
 
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import type { RetrievalResult } from "../services/retrieval/retrieval.service.ts";
-import type { IncidentContextWithAnomalies } from "../services/anomaly/anomaly-types.ts";
+import type { IncidentContext } from "../models/IncidentContext";
+import type { RetrievalResult } from "../services/retrieval/retrieval.service";
+import type { IncidentContextWithAnomalies } from "../services/anomaly/anomaly-types";
 
 /**
  * Compiles a detailed, structured prompt for the Root Cause Analysis LLM/Agent.

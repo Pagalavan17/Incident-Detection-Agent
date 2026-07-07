@@ -1,17 +1,17 @@
-import { createStep, createWorkflow } from "@mastra/core/workflows";
+﻿import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { LogSource } from "../../types/log.ts";
-import type { RawLog, ParseBatchResult } from "../../services/logs/parser.ts";
-import type { ValidatedLog, ValidationBatchResult } from "../../services/logs/validator.ts";
-import type { NormalisationBatchResult } from "../../services/logs/normalizer.ts";
+import { LogSource } from "../../types/log";
+import type { RawLog, ParseBatchResult } from "../../services/logs/parser";
+import type { ValidatedLog, ValidationBatchResult } from "../../services/logs/validator";
+import type { NormalisationBatchResult } from "../../services/logs/normalizer";
 import {
   createIncidentContext,
   updateIncidentContext,
   recordError,
   recordStep,
   type IncidentContext,
-} from "../../models/IncidentContext.ts";
+} from "../../models/IncidentContext";
 import {
   Severity,
   severityToPriority,
@@ -20,14 +20,14 @@ import {
   toIncidentId,
   toCorrelationId,
   toEpochMs,
-} from "../../types/common.ts";
-import type { AppError } from "../../types/common.ts";
-import { AnomalyType, IncidentLifecycle } from "../../contracts/incident.contract.ts";
-import type { AnomalySignal } from "../../contracts/incident.contract.ts";
+} from "../../types/common";
+import type { AppError } from "../../types/common";
+import { AnomalyType, IncidentLifecycle } from "../../contracts/incident.contract";
+import type { AnomalySignal } from "../../contracts/incident.contract";
 
-import { LogParser } from "../../services/logs/parser.ts";
-import { LogValidator } from "../../services/logs/validator.ts";
-import { LogNormaliser } from "../../services/logs/normalizer.ts";
+import { LogParser } from "../../services/logs/parser";
+import { LogValidator } from "../../services/logs/validator";
+import { LogNormaliser } from "../../services/logs/normalizer";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Dependency Interfaces

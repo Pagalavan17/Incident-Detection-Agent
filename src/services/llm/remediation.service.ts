@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/llm/remediation.service.ts
  *
  * PURPOSE:
@@ -6,13 +6,13 @@
  *   root cause, and invoking the abstract remediation agent.
  */
 
-import type { IRemediationAgent, RemediationPlan } from "../../types/remediation.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
-import type { RootCauseAnalysis } from "../../types/root-cause.ts";
-import { buildRemediationPrompt } from "../../prompts/remediation.prompt.ts";
-import { remediationAgent } from "../../mastra/agents/remediation.agent.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import type { IRemediationAgent, RemediationPlan } from "../../types/remediation";
+import type { IncidentContext } from "../../models/IncidentContext";
+import type { RootCauseAnalysis } from "../../types/root-cause";
+import { buildRemediationPrompt } from "../../prompts/remediation.prompt";
+import { remediationAgent } from "../../mastra/agents/remediation.agent";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 
 export class RemediationService {
   /**

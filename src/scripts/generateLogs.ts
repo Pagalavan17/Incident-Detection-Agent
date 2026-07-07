@@ -1,4 +1,4 @@
-import { run } from "./generate-logs.ts";
+﻿import { run } from "./generate-logs";
 
 try {
   run();

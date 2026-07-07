@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/contracts/workflow.contract.ts
  *
  * PURPOSE:
@@ -31,8 +31,8 @@ import type {
   EpochMs,
   Result,
   RunId,
-} from "../types/common.ts";
-import type { IncidentLifecycle } from "./incident.contract.ts";
+} from "../types/common";
+import type { IncidentLifecycle } from "./incident.contract";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. Workflow Execution Context

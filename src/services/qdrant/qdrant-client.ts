@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/qdrant/qdrant-client.ts
  *
  * PURPOSE:
@@ -6,7 +6,7 @@
  */
 
 import { QdrantClient } from "@qdrant/js-client-rest";
-import { env } from "../../config/env.ts";
+import { env } from "../../config/env";
 
 export const qdrantClient = new QdrantClient({
   url: env.QDRANT_URL,

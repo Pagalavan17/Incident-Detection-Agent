@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/prompts/guardrails.prompt.ts
  *
  * PURPOSE:
@@ -6,9 +6,9 @@
  *   Keeps LLM prompt construction separated from the execution and orchestrating services.
  */
 
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import type { RootCauseAnalysis } from "../types/root-cause.ts";
-import type { RemediationPlan } from "../types/remediation.ts";
+import type { IncidentContext } from "../models/IncidentContext";
+import type { RootCauseAnalysis } from "../types/root-cause";
+import type { RemediationPlan } from "../types/remediation";
 
 /**
  * Compiles a detailed, structured prompt for the AI Guardrails validation agent.

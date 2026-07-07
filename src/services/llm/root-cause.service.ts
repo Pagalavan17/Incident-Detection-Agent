@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/llm/root-cause.service.ts
  *
  * PURPOSE:
@@ -6,13 +6,13 @@
  *   retrieved matches, and invoking the abstract root cause agent.
  */
 
-import type { IRootCauseAgent, RootCauseAnalysis } from "../../types/root-cause.ts";
-import type { IncidentContext } from "../../models/IncidentContext.ts";
-import type { RetrievalResult } from "../retrieval/retrieval.service.ts";
-import { buildRootCausePrompt } from "../../prompts/root-cause.prompt.ts";
-import { rootCauseAgent } from "../../mastra/agents/root-cause.agent.ts";
-import type { Result, AppError } from "../../types/common.ts";
-import { ok, err, makeError } from "../../types/common.ts";
+import type { IRootCauseAgent, RootCauseAnalysis } from "../../types/root-cause";
+import type { IncidentContext } from "../../models/IncidentContext";
+import type { RetrievalResult } from "../retrieval/retrieval.service";
+import { buildRootCausePrompt } from "../../prompts/root-cause.prompt";
+import { rootCauseAgent } from "../../mastra/agents/root-cause.agent";
+import type { Result, AppError } from "../../types/common";
+import { ok, err, makeError } from "../../types/common";
 
 export class RootCauseService {
   /**

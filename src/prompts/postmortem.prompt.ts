@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/prompts/postmortem.prompt.ts
  *
  * PURPOSE:
@@ -6,10 +6,10 @@
  *   Keeps LLM prompt construction separated from the execution and orchestrating services.
  */
 
-import type { IncidentContext } from "../models/IncidentContext.ts";
-import type { RootCauseAnalysis } from "../types/root-cause.ts";
-import type { RemediationPlan } from "../types/remediation.ts";
-import type { ValidationResult } from "../types/guardrails.ts";
+import type { IncidentContext } from "../models/IncidentContext";
+import type { RootCauseAnalysis } from "../types/root-cause";
+import type { RemediationPlan } from "../types/remediation";
+import type { ValidationResult } from "../types/guardrails";
 
 /**
  * Compiles a detailed, structured prompt for the Post-Mortem Generator LLM/Agent.

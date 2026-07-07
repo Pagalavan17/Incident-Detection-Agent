@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/scripts/generate-logs.ts
  *
  * PURPOSE:
@@ -23,10 +23,10 @@ import { fileURLToPath } from "node:url";
 import {
   SyntheticLogGenerator,
   DEFAULT_GENERATOR_OPTIONS,
-} from "../services/logs/synthetic.generator.ts";
-import { LogParser } from "../services/logs/parser.ts";
-import { LogValidator } from "../services/logs/validator.ts";
-import { LogNormaliser } from "../services/logs/normalizer.ts";
+} from "../services/logs/synthetic.generator";
+import { LogParser } from "../services/logs/parser";
+import { LogValidator } from "../services/logs/validator";
+import { LogNormaliser } from "../services/logs/normalizer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
