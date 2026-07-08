@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    @apply h-full min-h-screen overflow-x-hidden;
+  }
+
+  /* Custom high-contrast cybersecurity borders and panel overlays */
+  .cyber-panel {
+    @apply bg-cyber-panel-light dark:bg-cyber-panel-dark border border-cyber-border-light dark:border-cyber-border-dark rounded-none shadow-none;
+  }
+
+  .cyber-border-glow {
+    @apply border border-cyber-primary/30 dark:border-cyber-primary/40 focus:border-cyber-primary focus:ring-1 focus:ring-cyber-primary outline-none;
+  }
+
+  /* Scrollbars styling for developers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-cyber-bg-light dark:bg-cyber-bg-dark;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-cyber-border-light dark:bg-cyber-border-dark border rounded-none;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-cyber-primary/50;
+  }
+}
