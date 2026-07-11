@@ -5,13 +5,14 @@
  *   Configures the Guardrails validation Mastra Agent with lazy initialization.
  *   The Agent is NOT constructed at module load time; it is created on the
  *   first call to validate(). This prevents a crash at startup when
- *   ANTHROPIC_API_KEY or ENKRYPTAI_GUARDRAILS_API_KEY are not configured.
+ *   the active provider's key is not configured.
+ *   This agent uses whichever provider is configured via LLM_PROVIDER.
  *
  * VALIDATION FLOW:
  *   1. Check ENKRYPTAI_GUARDRAILS_API_KEY is present (throws AppError-shape if not).
- *   2. Check ANTHROPIC_API_KEY is present via lazy Agent construction.
+ *   2. Check the active provider's key is present via lazy Agent construction.
  *   3. Call Enkrypt AI REST API for threat/injection/toxicity checks.
- *   4. Delegate deep semantic validation to the Mastra LLM Agent (Claude).
+ *   4. Delegate deep semantic validation to the Mastra LLM Agent.
  *
  * LAZY INIT CONTRACT:
  *   • If either key is absent, validate() throws a plain AppError-shaped object
@@ -22,7 +23,7 @@
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
 import axios from "axios";
-import { env, requireProviderKey } from "../../config/env";
+import { requireProviderKey, resolveActiveLLM } from "../../config/env";
 import type { IGuardrailsAgent, ValidationResult } from "../../types/guardrails";
 
 export class MastraGuardrailsAgent implements IGuardrailsAgent {
@@ -31,20 +32,20 @@ export class MastraGuardrailsAgent implements IGuardrailsAgent {
 
   /**
    * Returns the Agent, constructing it on first access.
-   * Throws an AppError-shaped object if ANTHROPIC_API_KEY is missing.
+   * Throws an AppError-shaped object if the selected provider's key is missing.
    */
   private getAgent(): Agent {
     if (this.agent !== undefined) return this.agent;
 
-    const apiKey = requireProviderKey("ANTHROPIC_API_KEY", "Anthropic Claude");
+    const { id, apiKey } = resolveActiveLLM(); // throws AppError-shape if selected provider's key is absent
 
     this.agent = new Agent({
       id: "guardrails-agent",
-      name: "Enkrypt AI Guardrails Agent",
+      name: "Remediation Guardrails Agent",
       instructions:
-        "You are Enkrypt AI Guardrails, a safety validation assistant. Your goal is to validate AI-generated Incident Response outputs (Root Cause Analysis and Remediation Plan) against the Incident Context. Adhere strictly to the requested schema. Generate only JSON, with no markdown formatting.",
+        "You are an expert Security and Reliability Guardrail Agent. Evaluate the proposed remediation actions against strict safety criteria. Ensure no destructive actions (like unrestricted DROP TABLE) or actions that increase blast radius are approved without explicit manual overrides. Adhere strictly to the requested schema. Generate only JSON, with no markdown formatting.",
       model: {
-        id: `anthropic/${env.ANTHROPIC_MODEL}` as `${string}/${string}`,
+        id,
         apiKey,
       },
     });
@@ -65,7 +66,7 @@ export class MastraGuardrailsAgent implements IGuardrailsAgent {
       "Enkrypt AI Guardrails"
     );
 
-    // 2. Assert Anthropic key is present and build/return the cached Agent.
+    // 2. Assert OpenAI key is present and build/return the cached Agent.
     const agent = this.getAgent();
 
     let enkryptIssues: string[] = [];
@@ -143,7 +144,7 @@ export class MastraGuardrailsAgent implements IGuardrailsAgent {
 
       const valResult = result.object;
 
-      // Merge issues from Enkrypt REST API and Claude LLM.
+      // Merge issues from Enkrypt REST API and LLM.
       const combinedIssues = [...enkryptIssues, ...valResult.issues];
       const combinedFailedChecks = [
         ...enkryptFailedChecks,

@@ -56,6 +56,16 @@ export const APP_TEAM_NAME = "HiDevs" as const;
 /** Default HTTP port for the Express API server. */
 export const DEFAULT_PORT = 3000 as const;
 
+/**
+ * Default OpenAI model identifier for auxiliary generation tasks.
+ */
+export const DEFAULT_OPENAI_MODEL = "gpt-4o" as const;
+
+/**
+ * Default Anthropic model identifier for RCA, remediation, guardrails, and post-mortem generation.
+ */
+export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929" as const;
+
 /** Default runtime environment when NODE_ENV is not set. */
 export const DEFAULT_NODE_ENV = "development" as const;
 
@@ -66,12 +76,7 @@ export const DEFAULT_NODE_ENV = "development" as const;
 //   Centralised here so that upgrading a model requires a single change.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Default Anthropic Claude model for RCA and post-mortem generation.
- * Use Claude 3.5 Sonnet — best balance of capability and latency for
- * complex reasoning tasks.
- */
-export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022" as const;
+
 
 /**
  * Default OpenAI embedding model.

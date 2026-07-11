@@ -1,12 +1,62 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useIncident } from "../context/IncidentContext";
 import EmptyState from "../components/ui/EmptyState";
+import LoadingState from "../components/ui/LoadingState";
+import ErrorBanner from "../components/ui/ErrorBanner";
 import PostMortemViewer from "../components/analysis/PostMortemViewer";
 import SeverityBadge from "../components/incident/SeverityBadge";
 import StatusChip from "../components/incident/StatusChip";
 
 export const PostMortem: React.FC = () => {
-  const { currentIncident } = useIncident();
+  const { currentIncident, isAnalyzing, error, retryAnalysis, generatePostMortem } = useIncident();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentIncident) return;
+    if (currentIncident.postMortem) return;
+    
+    // Check if we already have an error for this section, so we don't loop
+    if (generationError) return;
+
+    const runGeneration = async () => {
+      setIsGenerating(true);
+      setGenerationError(null);
+      try {
+        await generatePostMortem();
+      } catch (err: any) {
+        setGenerationError(err.message || "Failed to generate Post-Mortem Report");
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    runGeneration();
+  }, [currentIncident]);
+
+  const retryGeneration = async () => {
+    setGenerationError(null);
+    setIsGenerating(true);
+    try {
+      await generatePostMortem();
+    } catch (err: any) {
+      setGenerationError(err.message || "Failed to generate Post-Mortem Report");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  if (isAnalyzing || isGenerating) {
+    return <LoadingState message="Post-Mortem Engine Running" subMessage="Compiling comprehensive incident reports and action items..." />;
+  }
+
+  if (error) {
+    return <ErrorBanner code="POSTMORTEM_ERROR" message={error} onRetry={retryAnalysis} />;
+  }
+
+  if (generationError) {
+    return <ErrorBanner code="POSTMORTEM_GENERATION_ERROR" message={generationError} onRetry={retryGeneration} />;
+  }
 
   if (!currentIncident) {
     return <EmptyState />;

@@ -7,7 +7,7 @@ interface GuardrailsCardProps {
 }
 
 export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) => {
-  const confidencePct = Math.round(validation.confidence * 100);
+  const confidencePct = Math.round((validation?.confidence || 0) * 100);
 
   const riskStyles = {
     LOW: "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20",
@@ -19,19 +19,19 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
     <div className="bg-cyber-panel-light dark:bg-cyber-panel-dark border border-cyber-border-light dark:border-cyber-border-dark p-6 font-mono text-left space-y-6">
       {/* Policy Verification Indicator */}
       <div className={`p-4 border flex items-start space-x-3 ${
-        validation.approved
+        validation?.approved
           ? "bg-emerald-500/5 border-emerald-500/30 text-emerald-800 dark:text-emerald-400"
           : "bg-red-500/5 border-red-500/30 text-red-800 dark:text-red-400"
       }`}>
         <div className="p-1">
-          {validation.approved ? <ShieldCheck size={24} /> : <ShieldAlert size={24} />}
+          {validation?.approved ? <ShieldCheck size={24} /> : <ShieldAlert size={24} />}
         </div>
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wider">
-            {validation.approved ? "AI POLICY VALIDATION PASSED" : "AI POLICY VALIDATION REJECTED"}
+            {validation?.approved ? "AI POLICY VALIDATION PASSED" : "AI POLICY VALIDATION REJECTED"}
           </h3>
           <p className="text-[11px] font-sans text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-            {validation.approved
+            {validation?.approved
               ? "The generated mitigation plan complies with all safety policies and infrastructure restrictions."
               : "Safety validation triggered critical policy exceptions. Human intervention required before applying fixes."}
           </p>
@@ -43,8 +43,8 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
         <div className="p-3 bg-slate-50/50 dark:bg-slate-900/10 border border-cyber-border-light dark:border-cyber-border-dark">
           <span className="text-[9px] uppercase text-slate-500">Security Risk Rating</span>
           <div className="mt-2">
-            <span className={`px-2 py-0.5 text-xs font-bold uppercase ${riskStyles[validation.riskLevel]}`}>
-              {validation.riskLevel} RISK
+            <span className={`px-2 py-0.5 text-xs font-bold uppercase ${riskStyles[validation?.riskLevel || "MEDIUM"]}`}>
+              {validation?.riskLevel || "MEDIUM"} RISK
             </span>
           </div>
         </div>
@@ -63,10 +63,10 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
         <div className="space-y-3">
           <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
             <ShieldAlert size={12} className="mr-1.5 text-red-500" />
-            Exceptions / Policy Violations ({validation.failedChecks?.length || 0})
+            Exceptions / Policy Violations ({validation?.failedChecks?.length || 0})
           </h4>
           <ul className="space-y-2">
-            {validation.failedChecks?.map((check, idx) => (
+            {validation?.failedChecks?.map((check, idx) => (
               <li
                 key={idx}
                 className="text-[11px] bg-red-500/5 text-red-700 dark:text-red-400 border border-red-500/10 p-2 break-all"
@@ -74,7 +74,7 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
                 [VIOLATION] // {check}
               </li>
             ))}
-            {!validation.failedChecks?.length && (
+            {!validation?.failedChecks?.length && (
               <li className="text-xs text-slate-400 dark:text-slate-500 italic">No policies violated.</li>
             )}
           </ul>
@@ -82,7 +82,7 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
 
         {/* Detailed Issues & warnings */}
         <div className="space-y-4">
-          {validation.issues?.length > 0 && (
+          {validation?.issues && validation.issues.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Exceptions Summary
@@ -95,7 +95,7 @@ export const GuardrailsCard: React.FC<GuardrailsCardProps> = ({ validation }) =>
             </div>
           )}
 
-          {validation.warnings?.length > 0 && (
+          {validation?.warnings && validation.warnings.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
                 <AlertTriangle size={12} className="mr-1.5 text-amber-500" />

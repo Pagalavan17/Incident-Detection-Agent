@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/api/controllers/incident.controller.ts
  *
  * PURPOSE:
@@ -212,30 +212,17 @@ export class IncidentController {
   async rootCause(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = req.body as Record<string, unknown>;
-      const context = requireField<{ signal: { description: string } }>(
-        body,
-        "context"
-      );
+      const context = requireField<any>(body, "context");
+      const retrievalResult = requireField<any>(body, "retrievalResult");
 
-      // Synthesise a minimal valid log entry from the incident context so the
-      // pipeline's parse → validate → normalise steps can produce a record.
-      const syntheticLog = {
-        level: "ERROR",
-        message: context.signal?.description ?? "Debug RCA request",
-        service: "debug-endpoint",
-        host: "debug-host",
-        timestamp: new Date().toISOString(),
-        source: "APP_STRUCTURED",
-      };
-
-      const result = await this.pipeline.analyze([syntheticLog]);
+      const result = await this.pipeline.runRootCauseOnly(context, retrievalResult);
 
       if (!result.success) {
         return next(new HttpError(result.error, pipelineErrorStatus(result.error)));
       }
 
       res.status(200).json(
-        successBody({ rootCause: result.data.rootCause ?? null })
+        successBody({ rootCause: result.data ?? null })
       );
     } catch (e) {
       next(e);
@@ -253,28 +240,17 @@ export class IncidentController {
   async remediation(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = req.body as Record<string, unknown>;
-      const context = requireField<{ signal: { description: string } }>(
-        body,
-        "context"
-      );
+      const context = requireField<any>(body, "context");
+      const rootCause = requireField<any>(body, "rootCause");
 
-      const syntheticLog = {
-        level: "ERROR",
-        message: context.signal?.description ?? "Debug remediation request",
-        service: "debug-endpoint",
-        host: "debug-host",
-        timestamp: new Date().toISOString(),
-        source: "APP_STRUCTURED",
-      };
-
-      const result = await this.pipeline.analyze([syntheticLog]);
+      const result = await this.pipeline.runRemediationOnly(context, rootCause);
 
       if (!result.success) {
         return next(new HttpError(result.error, pipelineErrorStatus(result.error)));
       }
 
       res.status(200).json(
-        successBody({ remediation: result.data.remediation ?? null })
+        successBody({ remediation: result.data ?? null })
       );
     } catch (e) {
       next(e);
@@ -292,28 +268,18 @@ export class IncidentController {
   async guardrails(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = req.body as Record<string, unknown>;
-      const context = requireField<{ signal: { description: string } }>(
-        body,
-        "context"
-      );
+      const context = requireField<any>(body, "context");
+      const rootCause = requireField<any>(body, "rootCause");
+      const remediation = requireField<any>(body, "remediation");
 
-      const syntheticLog = {
-        level: "ERROR",
-        message: context.signal?.description ?? "Debug guardrails request",
-        service: "debug-endpoint",
-        host: "debug-host",
-        timestamp: new Date().toISOString(),
-        source: "APP_STRUCTURED",
-      };
-
-      const result = await this.pipeline.analyze([syntheticLog]);
+      const result = await this.pipeline.runGuardrailsOnly(context, rootCause, remediation);
 
       if (!result.success) {
         return next(new HttpError(result.error, pipelineErrorStatus(result.error)));
       }
 
       res.status(200).json(
-        successBody({ guardrails: result.data.guardrails ?? null })
+        successBody({ guardrails: result.data ?? null })
       );
     } catch (e) {
       next(e);
@@ -331,28 +297,21 @@ export class IncidentController {
   async postMortem(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const body = req.body as Record<string, unknown>;
-      const context = requireField<{ signal: { description: string } }>(
-        body,
-        "context"
-      );
+      const context = requireField<any>(body, "context");
+      const rootCause = requireField<any>(body, "rootCause");
+      const remediation = requireField<any>(body, "remediation");
+      // Note: route JSDoc in route file says "validation: ValidationResult", but controller uses "guardrails"
+      // to keep it consistent we'll look for `guardrails` in the body or `validation`.
+      const guardrails = requireField<any>(body, body["validation"] ? "validation" : "guardrails");
 
-      const syntheticLog = {
-        level: "ERROR",
-        message: context.signal?.description ?? "Debug post-mortem request",
-        service: "debug-endpoint",
-        host: "debug-host",
-        timestamp: new Date().toISOString(),
-        source: "APP_STRUCTURED",
-      };
-
-      const result = await this.pipeline.analyze([syntheticLog]);
+      const result = await this.pipeline.runPostMortemOnly(context, rootCause, remediation, guardrails);
 
       if (!result.success) {
         return next(new HttpError(result.error, pipelineErrorStatus(result.error)));
       }
 
       res.status(200).json(
-        successBody({ postMortem: result.data.postMortem ?? null })
+        successBody({ postMortem: result.data ?? null })
       );
     } catch (e) {
       next(e);

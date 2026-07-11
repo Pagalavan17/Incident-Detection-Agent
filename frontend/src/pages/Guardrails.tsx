@@ -1,12 +1,62 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useIncident } from "../context/IncidentContext";
 import EmptyState from "../components/ui/EmptyState";
+import LoadingState from "../components/ui/LoadingState";
+import ErrorBanner from "../components/ui/ErrorBanner";
 import GuardrailsCard from "../components/analysis/GuardrailsCard";
 import SeverityBadge from "../components/incident/SeverityBadge";
 import StatusChip from "../components/incident/StatusChip";
 
 export const Guardrails: React.FC = () => {
-  const { currentIncident } = useIncident();
+  const { currentIncident, isAnalyzing, error, retryAnalysis, generateGuardrails } = useIncident();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentIncident) return;
+    if (currentIncident.guardrails) return;
+    
+    // Check if we already have an error for this section, so we don't loop
+    if (generationError) return;
+
+    const runGeneration = async () => {
+      setIsGenerating(true);
+      setGenerationError(null);
+      try {
+        await generateGuardrails();
+      } catch (err: any) {
+        setGenerationError(err.message || "Failed to generate Guardrails Analysis");
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    runGeneration();
+  }, [currentIncident]);
+
+  const retryGeneration = async () => {
+    setGenerationError(null);
+    setIsGenerating(true);
+    try {
+      await generateGuardrails();
+    } catch (err: any) {
+      setGenerationError(err.message || "Failed to generate Guardrails Analysis");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  if (isAnalyzing || isGenerating) {
+    return <LoadingState message="Policy Engine Running" subMessage="Validating mitigations against safety guardrails..." />;
+  }
+
+  if (error) {
+    return <ErrorBanner code="GUARDRAILS_ERROR" message={error} onRetry={retryAnalysis} />;
+  }
+
+  if (generationError) {
+    return <ErrorBanner code="GUARDRAILS_GENERATION_ERROR" message={generationError} onRetry={retryGeneration} />;
+  }
 
   if (!currentIncident) {
     return <EmptyState />;

@@ -128,6 +128,7 @@ export type ErrorCode =
   | "PIPELINE_STEP_FAILED"
   | "PIPELINE_ABORTED"
   | "SERIALIZATION_FAILED"
+  | "VALIDATION_ERROR"
   | "UNKNOWN_ERROR";
 
 /** The canonical error shape used across all service boundaries. */

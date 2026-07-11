@@ -4,7 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 
 export const NotFound: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-160px)] px-6 font-mono text-left">
+    <div className="flex h-full flex-col items-center justify-center px-6 font-mono text-left">
       <div className="cyber-panel p-8 text-center space-y-6 max-w-md w-full bg-cyber-panel-light dark:bg-cyber-panel-dark">
         <div className="w-14 h-14 bg-red-500/10 border border-red-500/30 text-red-500 flex items-center justify-center mx-auto">
           <ShieldX size={28} />

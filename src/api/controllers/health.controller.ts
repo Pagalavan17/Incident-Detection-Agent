@@ -116,7 +116,7 @@ export class HealthController {
    *
    * Checks:
    *   • Qdrant connectivity (live network probe)
-   *   • Anthropic, OpenAI, Enkrypt key presence (env check, no network call)
+   *   • OpenAI, Enkrypt key presence (env check, no network call)
    *
    * HTTP 200 — Qdrant is reachable (server can accept and process requests).
    *             AI providers may be "unconfigured" — that is not a readiness failure
@@ -136,7 +136,6 @@ export class HealthController {
 
       const services: ReadonlyArray<ServiceCheck> = [
         qdrantCheck,
-        checkProviderKey("anthropic", providerStatus.anthropic),
         checkProviderKey("openai", providerStatus.openai),
         checkProviderKey("enkrypt", providerStatus.enkrypt),
       ];

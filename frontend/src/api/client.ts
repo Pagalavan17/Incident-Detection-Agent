@@ -10,6 +10,7 @@ import type {
   RemediationPlan,
   ValidationResult,
   PostMortemReport,
+  RetrievalResult,
 } from "./types";
 
 // Create Axios Client
@@ -73,37 +74,38 @@ export const apiAnalyze = async (logs: Record<string, unknown>[]): Promise<ApiRe
 };
 
 // POST /api/v1/root-cause - Debug RCA only (under the hood / for future extensions)
-export const apiRootCause = async (context: IncidentContext): Promise<ApiResponse<{ rootCause: RootCauseAnalysis | null }>> => {
+export const apiRootCause = async (context: IncidentContext, retrievalResult: RetrievalResult): Promise<ApiResponse<{ rootCause: RootCauseAnalysis | null }>> => {
   const response = await apiClient.post<ApiResponse<{ rootCause: RootCauseAnalysis | null }>>(
     `${API_VERSION}/root-cause`,
-    { context }
+    { context, retrievalResult }
   );
   return response.data;
 };
 
 // POST /api/v1/remediation - Debug Remediation only
-export const apiRemediation = async (context: IncidentContext): Promise<ApiResponse<{ remediation: RemediationPlan | null }>> => {
+export const apiRemediation = async (context: IncidentContext, rootCause: RootCauseAnalysis): Promise<ApiResponse<{ remediation: RemediationPlan | null }>> => {
   const response = await apiClient.post<ApiResponse<{ remediation: RemediationPlan | null }>>(
     `${API_VERSION}/remediation`,
-    { context }
+    { context, rootCause }
   );
   return response.data;
 };
 
 // POST /api/v1/guardrails - Debug Guardrails only
-export const apiGuardrails = async (context: IncidentContext): Promise<ApiResponse<{ guardrails: ValidationResult | null }>> => {
+export const apiGuardrails = async (context: IncidentContext, rootCause: RootCauseAnalysis, remediation: RemediationPlan): Promise<ApiResponse<{ guardrails: ValidationResult | null }>> => {
   const response = await apiClient.post<ApiResponse<{ guardrails: ValidationResult | null }>>(
     `${API_VERSION}/guardrails`,
-    { context }
+    { context, rootCause, remediation }
   );
   return response.data;
 };
 
 // POST /api/v1/postmortem - Debug Post-Mortem only
-export const apiPostmortem = async (context: IncidentContext): Promise<ApiResponse<{ postMortem: PostMortemReport | null }>> => {
+export const apiPostmortem = async (context: IncidentContext, rootCause: RootCauseAnalysis, remediation: RemediationPlan, guardrails: ValidationResult): Promise<ApiResponse<{ postMortem: PostMortemReport | null }>> => {
   const response = await apiClient.post<ApiResponse<{ postMortem: PostMortemReport | null }>>(
     `${API_VERSION}/postmortem`,
-    { context }
+    { context, rootCause, remediation, guardrails }
   );
   return response.data;
 };
+

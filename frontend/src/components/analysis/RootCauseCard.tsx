@@ -7,7 +7,7 @@ interface RootCauseCardProps {
 }
 
 export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
-  const confidencePct = Math.round(rca.confidence * 100);
+  const confidencePct = Math.round((rca?.confidence || 0) * 100);
   
   const getConfidenceLevel = (score: number) => {
     if (score >= 0.85) return { label: "HIGH", color: "text-emerald-500", border: "border-emerald-500/30" };
@@ -15,7 +15,7 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
     return { label: "LOW (REVIEW REQUIRED)", color: "text-red-500", border: "border-red-500/30" };
   };
 
-  const level = getConfidenceLevel(rca.confidence);
+  const level = getConfidenceLevel(rca?.confidence || 0);
 
   return (
     <div className="bg-cyber-panel-light dark:bg-cyber-panel-dark border border-cyber-border-light dark:border-cyber-border-dark p-6 font-mono text-left space-y-6">
@@ -30,7 +30,7 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
           </span>
         </div>
         <h3 className="text-sm md:text-base font-bold text-red-600 dark:text-red-400 uppercase leading-snug">
-          {rca.probableCause}
+          {rca?.probableCause || "Pending or missing analysis."}
         </h3>
       </div>
 
@@ -40,7 +40,7 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
           Reasoning & Analytical Logic
         </h4>
         <p className="text-xs text-slate-700 dark:text-slate-300 font-sans leading-relaxed border-l-2 border-cyber-primary/40 pl-4 py-1">
-          {rca.reasoning}
+          {rca?.reasoning || "No reasoning context was provided by the AI."}
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
             Supporting Evidence Logs
           </h4>
           <ul className="space-y-2">
-            {rca.evidence?.map((item, idx) => (
+            {rca?.evidence?.map((item, idx) => (
               <li
                 key={idx}
                 className="text-[11px] text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-900/40 p-2 border border-cyber-border-light dark:border-cyber-border-dark break-all"
@@ -60,7 +60,7 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
                 {item}
               </li>
             ))}
-            {!rca.evidence?.length && (
+            {!rca?.evidence?.length && (
               <li className="text-[11px] text-slate-400 dark:text-slate-600 italic">No explicit evidence lines provided.</li>
             )}
           </ul>
@@ -68,14 +68,14 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
 
         <div className="space-y-6">
           {/* Related anomalies */}
-          {rca.supportingAnomalies?.length > 0 && (
+          {rca?.supportingAnomalies && rca.supportingAnomalies.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
                 <FileCode size={12} className="mr-1.5 text-cyber-accent" />
                 Contributing Anomalies
               </h4>
               <div className="flex flex-wrap gap-2">
-                {rca.supportingAnomalies.map((type, idx) => (
+                {rca?.supportingAnomalies.map((type, idx) => (
                   <span
                     key={idx}
                     className="px-2 py-0.5 text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
@@ -88,14 +88,14 @@ export const RootCauseCard: React.FC<RootCauseCardProps> = ({ rca }) => {
           )}
 
           {/* Related incident IDs */}
-          {rca.relatedIncidents?.length > 0 && (
+          {rca?.relatedIncidents && rca.relatedIncidents.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
                 <HelpCircle size={12} className="mr-1.5 text-slate-400" />
                 Linked Historical Cases
               </h4>
               <div className="flex flex-wrap gap-2">
-                {rca.relatedIncidents.map((id, idx) => (
+                {rca?.relatedIncidents.map((id, idx) => (
                   <span
                     key={idx}
                     className="px-2 py-0.5 text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-cyber-border-light dark:border-cyber-border-dark"

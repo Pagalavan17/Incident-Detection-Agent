@@ -1,14 +1,13 @@
-﻿import { createStep, createWorkflow } from "@mastra/core/workflows";
+import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { LogSource } from "../../types/log";
-import type { RawLog, ParseBatchResult } from "../../services/logs/parser";
-import type { ValidatedLog, ValidationBatchResult } from "../../services/logs/validator";
-import type { NormalisationBatchResult } from "../../services/logs/normalizer";
+import type { ParseBatchResult } from "../../services/logs/parser";
+import type { ValidBatchResult } from "../../services/logs/validator";
+import type { NormaliseBatchResult } from "../../services/logs/normalizer";
 import {
   createIncidentContext,
   updateIncidentContext,
-  recordError,
   recordStep,
   type IncidentContext,
 } from "../../models/IncidentContext";
@@ -38,11 +37,11 @@ export interface ILogParser {
 }
 
 export interface ILogValidator {
-  validateBatch(rawLogs: ReadonlyArray<RawLog>): ValidationBatchResult;
+  validateBatch(rawLogs: ReadonlyArray<any>): ValidBatchResult;
 }
 
 export interface ILogNormaliser {
-  normaliseBatch(validated: ReadonlyArray<ValidatedLog>): NormalisationBatchResult;
+  normaliseBatch(validated: ReadonlyArray<any>): NormaliseBatchResult;
 }
 
 export interface WorkflowStepResult<T> {
@@ -124,11 +123,11 @@ export function createIncidentAnalysisWorkflow({
     id: "validator",
     inputSchema: z.any(),
     outputSchema: z.any(),
-    execute: async ({ inputData }): Promise<WorkflowStepResult<ValidationBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }>> => {
+    execute: async ({ inputData }): Promise<WorkflowStepResult<ValidBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }>> => {
       const startTime = Date.now();
       const startTimeStr = new Date(startTime).toISOString();
       let success = true;
-      let resultData: (ValidationBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }) | undefined;
+      let resultData: (ValidBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }) | undefined;
       let error: AppError | undefined;
 
       const prevResult = inputData as WorkflowStepResult<ParseBatchResult & { source: LogSource; sourceId: string }>;
@@ -190,7 +189,7 @@ export function createIncidentAnalysisWorkflow({
       let context: IncidentContext | undefined;
       let error: AppError | undefined;
 
-      const prevResult = inputData as WorkflowStepResult<ValidationBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }>;
+      const prevResult = inputData as WorkflowStepResult<ValidBatchResult & { source: LogSource; sourceId: string; rawEntryCount: number }>;
 
       if (!prevResult.success || !prevResult.data) {
         success = false;
@@ -242,29 +241,6 @@ export function createIncidentAnalysisWorkflow({
           });
 
           const parserResult = getStepResult<WorkflowStepResult<ParseBatchResult & { startedAt: number; completedAt: number }>>("parser");
-
-          if (parserResult?.data?.failures) {
-            for (const fail of parserResult.data.failures) {
-              ctx = recordError(ctx, {
-                code: "LOG_PARSE_FAILED",
-                message: `Failed to parse raw entry at index ${fail.index}: ${fail.reason}`,
-                context: { raw: fail.raw },
-              });
-            }
-          }
-
-          if (prevResult.data.invalid) {
-            for (const fail of prevResult.data.invalid) {
-              const issuesStr = fail.issues
-                .map((i: any) => `${i.path.join(".")}: ${i.message}`)
-                .join("; ");
-              ctx = recordError(ctx, {
-                code: "LOG_INGESTION_FAILED",
-                message: `Validation failed at index ${fail.index}: ${issuesStr}`,
-                context: { rawLog: fail.rawLog },
-              });
-            }
-          }
 
           if (parserResult) {
             ctx = recordStep(ctx, {

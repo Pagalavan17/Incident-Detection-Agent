@@ -1,18 +1,26 @@
 import React, { useState } from "react";
 import { useIncident } from "../context/IncidentContext";
 import EmptyState from "../components/ui/EmptyState";
-import SeverityBadge from "../components/incident/SeverityBadge";
-import StatusChip from "../components/incident/StatusChip";
+import LoadingState from "../components/ui/LoadingState";
+import ErrorBanner from "../components/ui/ErrorBanner";
+import { SeverityBadge, StatusBadge } from "../components/ui";
 import AnomalyTable from "../components/incident/AnomalyTable";
 import Timeline from "../components/incident/Timeline";
 import HistoricalIncidentTable from "../components/incident/HistoricalIncidentTable";
-import { Terminal, Activity } from "lucide-react";
+import { Terminal, Activity, Download, UserPlus } from "lucide-react";
+import LogViewer from "../components/ui/LogViewer";
 
 export const IncidentDetails: React.FC = () => {
-  const { currentIncident } = useIncident();
-  const [logSearch, setLogSearch] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const logsPerPage = 15;
+  const { currentIncident, isAnalyzing, error } = useIncident();
+  const [assignee, setAssignee] = useState("Unassigned");
+
+  if (isAnalyzing) {
+    return <LoadingState message="Incident Context Loading" subMessage="Normalizing logs and aggregating telemetry..." />;
+  }
+
+  if (error) {
+    return <ErrorBanner code="INCIDENT_ERROR" message={error} />;
+  }
 
   if (!currentIncident) {
     return <EmptyState />;
@@ -21,199 +29,159 @@ export const IncidentDetails: React.FC = () => {
   const { incident, anomalies, historicalMatches } = currentIncident;
   const logEntries = incident.logBatch?.entries || [];
 
-  // Filter logs by search query
-  const filteredLogs = logEntries.filter((entry) => {
-    const searchLower = logSearch.toLowerCase();
-    return (
-      entry.message.toLowerCase().includes(searchLower) ||
-      entry.service.toLowerCase().includes(searchLower) ||
-      entry.host.toLowerCase().includes(searchLower) ||
-      entry.severity.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Paginate logs
-  const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
-  const indexOfLastLog = currentPage * logsPerPage;
-  const indexOfFirstLog = indexOfLastLog - logsPerPage;
-  const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog);
+  const handleExportCSV = () => {
+    const headers = "ID,Timestamp,Service,Host,Severity,Message\n";
+    const rows = logEntries
+      .map((e) => `${e.id},"${e.timestampIso}","${e.service}","${e.host}",${e.severity},"${e.message.replace(/"/g, '""')}"`)
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `incident-telemetry-${incident.runId.substring(0, 8)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="space-y-6 font-mono text-left">
+    <div className="space-y-6 font-mono text-left text-white max-w-7xl mx-auto">
       {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-cyber-border-light dark:border-cyber-border-dark pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
-          <h1 className="text-lg md:text-xl font-bold tracking-widest text-slate-800 dark:text-slate-100 uppercase">
+          <h1 className="text-xl font-bold tracking-widest text-white uppercase bg-gradient-to-r from-white to-brand-neon bg-clip-text text-transparent">
             Incident Telemetry Center
           </h1>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 uppercase">
-            Normalised logs, pipeline details, and anomaly validation scopes
+          <p className="text-[10px] text-text-muted mt-1 uppercase">
+            Normalized log streams, historical database correlations, and diagnostic events
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <SeverityBadge severity={incident.severity} />
-          <StatusChip status={incident.lifecycle} />
+          <SeverityBadge severity={incident.severity.toLowerCase() as any} />
+          <StatusBadge status="danger" label={incident.lifecycle} />
         </div>
       </div>
 
-      {/* Incident Header Overview */}
-      <div className="cyber-panel p-6 bg-cyber-panel-light dark:bg-cyber-panel-dark grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-4">
-          <div>
-            <span className="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Title</span>
-            <h3 className="text-sm font-bold uppercase mt-1 text-slate-800 dark:text-slate-200">
-              {incident.title}
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-xs font-sans">
+      {/* Grid: Overview Board */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Core details board (col-span-8) */}
+        <div className="lg:col-span-8 bg-[#111827] border border-white/10 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="space-y-5">
             <div>
-              <span className="text-[9px] font-mono text-slate-400 uppercase">CORRELATION ID</span>
-              <p className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 break-all mt-0.5">
-                {incident.correlationId}
-              </p>
+              <span className="text-[8px] uppercase text-text-muted font-bold tracking-widest block">Title</span>
+              <h3 className="text-sm font-bold uppercase mt-1 text-white leading-normal">
+                {incident.title}
+              </h3>
             </div>
-            <div>
-              <span className="text-[9px] font-mono text-slate-400 uppercase">PIPELINE RUN ID</span>
-              <p className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 break-all mt-0.5">
-                {incident.runId}
-              </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
+              <div className="bg-white/2 p-3 border border-white/5 rounded-xl">
+                <span className="text-[8px] font-mono text-text-muted uppercase block">Correlation Scope ID</span>
+                <p className="font-mono text-[10px] font-bold text-brand-neon break-all mt-1">
+                  {incident.correlationId}
+                </p>
+              </div>
+              <div className="bg-white/2 p-3 border border-white/5 rounded-xl">
+                <span className="text-[8px] font-mono text-text-muted uppercase block">Telemetry Run Session ID</span>
+                <p className="font-mono text-[10px] font-bold text-brand-neon break-all mt-1">
+                  {incident.runId}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons (Export, Assign Analyst) */}
+          <div className="flex flex-wrap items-center justify-between border-t border-white/5 mt-6 pt-4 gap-3 text-xs font-sans">
+            <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-xl px-3 py-1.5">
+              <UserPlus size={13} className="text-brand-neon" />
+              <span className="text-text-secondary text-[10px] font-mono uppercase">Owner:</span>
+              <select
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                className="bg-transparent border-none text-[10px] font-mono font-bold text-white focus:outline-none p-0 ml-1"
+              >
+                <option value="Unassigned">UNASSIGNED</option>
+                <option value="John Doe">JOHN DOE (Admin)</option>
+                <option value="SecOps Tier-1">SECOPS TIER-1</option>
+                <option value="AI Autoremedy">AI AUTOREMEDY</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-bold border border-white/10 hover:border-brand-neon hover:bg-brand-neon/10 rounded-xl text-text-secondary hover:text-white transition-all font-mono uppercase cursor-pointer"
+              >
+                <Download size={12} />
+                Export CSV
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="border-t md:border-t-0 md:border-l border-cyber-border-light dark:border-cyber-border-dark pt-4 md:pt-0 md:pl-6 space-y-2 text-xs">
-          <div className="flex justify-between">
-            <span className="text-slate-400 uppercase">DETECTION TIME</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300">{new Date(incident.detectedAt).toLocaleTimeString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400 uppercase">LAST MODIFIED</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300">{new Date(incident.updatedAt).toLocaleTimeString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400 uppercase">TOTAL LOG BATCH</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300">{logEntries.length} lines</span>
+        {/* Info panel (col-span-4) */}
+        <div className="lg:col-span-4 bg-[#111827] border border-white/10 rounded-2xl p-6 space-y-4 font-sans text-xs">
+          <h4 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white border-b border-white/5 pb-2">
+            Audit Metadata
+          </h4>
+          <div className="space-y-3 font-mono text-[11px]">
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-text-muted uppercase">DETECTION TIME</span>
+              <span className="font-bold text-white">{new Date(incident.detectedAt).toLocaleTimeString()}</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-text-muted uppercase">LAST MODIFIED</span>
+              <span className="font-bold text-white">{new Date(incident.updatedAt).toLocaleTimeString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-text-muted uppercase">LOG LINE COUNTS</span>
+              <span className="font-bold text-white">{logEntries.length} lines</span>
+            </div>
           </div>
         </div>
+
       </div>
 
-      {/* Grid of Anomalies and Timeline */}
+      {/* Grid: Tables & Timeline */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Detected Anomalies and matches (col-span-2) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Fired Anomalies section */}
-          <div>
-            <h3 className="text-xs font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase mb-3 flex items-center">
+          <div className="bg-[#111827] border border-white/10 rounded-2xl p-6">
+            <h3 className="text-xs font-bold tracking-widest text-white uppercase border-b border-white/5 pb-2 mb-4 flex items-center">
               <Activity size={14} className="mr-1.5 text-red-500" />
               Detected Anomaly Signals ({anomalies.length})
             </h3>
             <AnomalyTable anomalies={anomalies} />
           </div>
-          
-          {/* Historical Incident Retrieval */}
-          <div>
+
+          <div className="bg-[#111827] border border-white/10 rounded-2xl p-6">
             <HistoricalIncidentTable matches={historicalMatches} />
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* Timeline (col-span-1) */}
+        <div className="lg:col-span-1 bg-[#111827] border border-white/10 rounded-2xl p-6">
           <Timeline incidentData={currentIncident} />
         </div>
+
       </div>
 
-      {/* Full Ingested/Normalised logs listing */}
+      {/* Normalized Logs Stream Console */}
       {logEntries.length > 0 && (
-        <div className="cyber-panel p-6 bg-cyber-panel-light dark:bg-cyber-panel-dark space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-cyber-border-light dark:border-cyber-border-dark pb-3">
-            <h3 className="text-xs font-bold tracking-widest text-slate-800 dark:text-slate-200 uppercase flex items-center">
-              <Terminal size={14} className="mr-1.5 text-cyber-primary" />
-              Ingested Normalized Log Batch
-            </h3>
-            
-            {/* Log Search input */}
-            <input
-              type="text"
-              value={logSearch}
-              onChange={(e) => {
-                setLogSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="FILTER LOG ENTRIES..."
-              className="bg-cyber-bg-light dark:bg-cyber-bg-dark border border-cyber-border-light dark:border-cyber-border-dark px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-700 focus:outline-none focus:border-cyber-primary max-w-xs"
-            />
-          </div>
-
-          <div className="overflow-x-auto border border-cyber-border-light dark:border-cyber-border-dark">
-            <table className="w-full text-xs font-mono border-collapse">
-              <thead>
-                <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-cyber-border-light dark:border-cyber-border-dark text-[10px] uppercase text-slate-500">
-                  <th className="p-2 text-left font-semibold">Timestamp</th>
-                  <th className="p-2 text-left font-semibold">Service</th>
-                  <th className="p-2 text-left font-semibold">Host</th>
-                  <th className="p-2 text-left font-semibold">Severity</th>
-                  <th className="p-2 text-left font-semibold">Message</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cyber-border-light dark:divide-cyber-border-dark">
-                {currentLogs.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="hover:bg-slate-100/50 dark:hover:bg-slate-800/10 text-slate-700 dark:text-slate-300"
-                  >
-                    <td className="p-2 whitespace-nowrap text-[10px] text-slate-400">
-                      {entry.timestampIso}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-[10px] font-bold text-cyber-primary">
-                      {entry.service}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-[10px] text-slate-500">
-                      {entry.host}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-[10px]">
-                      <SeverityBadge severity={entry.severity} />
-                    </td>
-                    <td className="p-2 font-sans break-all max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
-                      {entry.message}
-                    </td>
-                  </tr>
-                ))}
-                {!currentLogs.length && (
-                  <tr>
-                    <td colSpan={5} className="p-4 text-center text-slate-400 italic">
-                      No logs match search criteria
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-2 text-[10px] uppercase tracking-wider text-slate-400 select-none">
-              <span>
-                Page {currentPage} of {totalPages} ({filteredLogs.length} total entries)
-              </span>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1 border border-cyber-border-light dark:border-cyber-border-dark hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent cursor-pointer"
-                >
-                  PREV
-                </button>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1 border border-cyber-border-light dark:border-cyber-border-dark hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent cursor-pointer"
-                >
-                  NEXT
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold tracking-widest text-text-muted uppercase flex items-center">
+            <Terminal size={14} className="mr-1.5 text-brand-neon" />
+            Raw Ingested Log Telemetry Console
+          </h3>
+          <LogViewer logs={logEntries} />
         </div>
       )}
+
     </div>
   );
 };
+
 export default IncidentDetails;

@@ -43,8 +43,9 @@ import { config as loadDotEnv } from "dotenv";
 import { z } from "zod";
 import {
   APP_NAME,
-  DEFAULT_ANTHROPIC_MODEL,
   DEFAULT_OPENAI_EMBEDDING_MODEL,
+  DEFAULT_OPENAI_MODEL,
+  DEFAULT_ANTHROPIC_MODEL,
   LARGE_OPENAI_EMBEDDING_MODEL,
 } from "../constants/app.constants";
 import {
@@ -114,10 +115,6 @@ const coreSchema = z.object({
     .enum([DEFAULT_OPENAI_EMBEDDING_MODEL, LARGE_OPENAI_EMBEDDING_MODEL])
     .default(DEFAULT_OPENAI_EMBEDDING_MODEL),
 
-  /**
-   * Anthropic Claude model identifier.
-   */
-  ANTHROPIC_MODEL: z.string().min(1).default(DEFAULT_ANTHROPIC_MODEL),
 });
 
 const coreResult = coreSchema.safeParse(process.env);
@@ -145,8 +142,25 @@ if (!coreResult.success) {
 
 const providerSchema = z.object({
   /**
-   * Anthropic Claude API key.
-   * Required by: root-cause, remediation, guardrails, post-mortem agents.
+   * Which LLM provider the RCA/Remediation/Guardrails/Post-Mortem agents use.
+   * Swap this (plus the matching *_API_KEY below) to fail over to another
+   * provider without touching any agent code.
+   */
+  LLM_PROVIDER: z
+    .enum(["openai", "anthropic", "groq", "google", "deepseek"])
+    .default("anthropic"),
+
+  /**
+   * Anthropic model identifier for RCA, remediation, guardrails, and post-mortem generation.
+   */
+  ANTHROPIC_MODEL: z
+    .string()
+    .min(1)
+    .default(DEFAULT_ANTHROPIC_MODEL),
+
+  /**
+   * Anthropic API key.
+   * Required by: root-cause, remediation, guardrails, and post-mortem agents.
    * Obtain at: https://console.anthropic.com/
    */
   ANTHROPIC_API_KEY: z
@@ -156,6 +170,24 @@ const providerSchema = z.object({
       message: "ANTHROPIC_API_KEY must start with 'sk-ant-'",
     })
     .optional(),
+
+  GROQ_MODEL: z.string().min(1).default("openai/gpt-oss-120b"),
+  GROQ_API_KEY: z.string().optional(),
+
+  GOOGLE_MODEL: z.string().min(1).default("gemini-2.0-flash"),
+  GOOGLE_API_KEY: z.string().optional(),
+
+  DEEPSEEK_MODEL: z.string().min(1).default("deepseek-chat"),
+  DEEPSEEK_API_KEY: z.string().optional(),
+
+  /**
+   * OpenAI model identifier for auxiliary tasks.
+   * See app.constants.ts for the canonical model identifier.
+   */
+  OPENAI_MODEL: z
+    .string()
+    .min(1)
+    .default(DEFAULT_OPENAI_MODEL),
 
   /**
    * OpenAI API key.
@@ -175,7 +207,7 @@ const providerSchema = z.object({
    * Required by: guardrails validation service.
    * Obtain at: https://enkryptai.com/
    */
-  ENKRYPTAI_GUARDRAILS_API_KEY: z.string().min(1).optional(),
+  ENKRYPTAI_GUARDRAILS_API_KEY: z.string().optional(),
 
   /**
    * Qdrant REST API base URL.
@@ -212,10 +244,19 @@ const providerEnv = providerResult.success
         issues +
         "\n   Some AI features will be unavailable until keys are configured.\n"
       );
-      // Return safe defaults: all optional fields undefined, QDRANT_URL with default.
+      // Return safe defaults
       return {
+        LLM_PROVIDER: "anthropic",
         ANTHROPIC_API_KEY: undefined,
+        ANTHROPIC_MODEL: DEFAULT_ANTHROPIC_MODEL,
+        GROQ_API_KEY: undefined,
+        GROQ_MODEL: "openai/gpt-oss-120b",
+        GOOGLE_API_KEY: undefined,
+        GOOGLE_MODEL: "gemini-2.0-flash",
+        DEEPSEEK_API_KEY: undefined,
+        DEEPSEEK_MODEL: "deepseek-chat",
         OPENAI_API_KEY: undefined,
+        OPENAI_MODEL: DEFAULT_OPENAI_MODEL,
         ENKRYPTAI_GUARDRAILS_API_KEY: undefined,
         QDRANT_URL: DEFAULT_QDRANT_URL,
         QDRANT_API_KEY: undefined,
@@ -233,14 +274,14 @@ export type Env = z.infer<typeof coreSchema> & z.infer<typeof providerSchema>;
 /**
  * The validated, typed, deeply frozen environment configuration.
  *
- * Provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, ENKRYPTAI_GUARDRAILS_API_KEY)
- * are typed as `string | undefined`. Services MUST call `requireProviderKey()`
- * (or their own equivalent guard) before using these values.
+ * Provider keys (OPENAI_API_KEY, ENKRYPTAI_GUARDRAILS_API_KEY)
+ * are typed as string | undefined if marked optional in the schema, but they are
+ * logically required for specific endpoints. Use this helper to assert presence
+ * and throw an AppError if missing.
  *
- * USAGE:
- *   import { env } from '../config/env';
- *   const url = env.QDRANT_URL; // always a string
- *   const key = env.ANTHROPIC_API_KEY; // string | undefined
+ * Example:
+ *   const key = env.OPENAI_API_KEY; // string | undefined
+ *   const validKey = requireProviderKey("OPENAI_API_KEY", "OpenAI");
  */
 export const env: Readonly<Env> = Object.freeze({
   ...coreResult.data,
@@ -260,7 +301,6 @@ export const env: Readonly<Env> = Object.freeze({
  * Exported for the /ready health endpoint.
  */
 export interface ProviderStatus {
-  readonly anthropic: boolean;
   readonly openai: boolean;
   readonly enkrypt: boolean;
   readonly qdrant: boolean;
@@ -271,7 +311,6 @@ export interface ProviderStatus {
  * Does NOT test connectivity — only checks key presence.
  */
 export const getProviderStatus = (): ProviderStatus => ({
-  anthropic: env.ANTHROPIC_API_KEY !== undefined,
   openai: env.OPENAI_API_KEY !== undefined,
   enkrypt: env.ENKRYPTAI_GUARDRAILS_API_KEY !== undefined,
   // Qdrant always has a URL (default), but flag it only if explicitly set
@@ -292,12 +331,17 @@ export const getProviderStatus = (): ProviderStatus => ({
 export const requireProviderKey = (
   keyName: keyof Pick<
     Env,
-    "ANTHROPIC_API_KEY" | "OPENAI_API_KEY" | "ENKRYPTAI_GUARDRAILS_API_KEY"
+    | "OPENAI_API_KEY"
+    | "ANTHROPIC_API_KEY"
+    | "GROQ_API_KEY"
+    | "GOOGLE_API_KEY"
+    | "DEEPSEEK_API_KEY"
+    | "ENKRYPTAI_GUARDRAILS_API_KEY"
   >,
   providerLabel: string
 ): string => {
   const value = env[keyName];
-  if (value === undefined) {
+  if (value === undefined || value.trim() === "") {
     throw {
       code: "ENV_VALIDATION_FAILED" as const,
       message:
@@ -329,3 +373,26 @@ export const isAutoRemediationEnabled = (): boolean =>
 /** Returns true when an OTLP export endpoint is configured. */
 export const isTracingEnabled = (): boolean =>
   env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined;
+
+/**
+ * Resolves the currently configured LLM provider into a Mastra model id +
+ * API key pair, based on `LLM_PROVIDER`. Throws the same AppError-shaped
+ * object as `requireProviderKey` if the selected provider's key is absent,
+ * so callers (the 4 agent files) can catch it identically to today.
+ */
+export const resolveActiveLLM = (): { id: `${string}/${string}`; apiKey: string } => {
+  console.log(`[DEBUG resolveActiveLLM] env.GROQ_MODEL: ${env.GROQ_MODEL}, process.env.GROQ_MODEL: ${process.env.GROQ_MODEL}`);
+  switch (env.LLM_PROVIDER) {
+    case "anthropic":
+      return { id: `anthropic/${env.ANTHROPIC_MODEL}`, apiKey: requireProviderKey("ANTHROPIC_API_KEY", "Anthropic") };
+    case "groq":
+      return { id: `groq/${env.GROQ_MODEL}`, apiKey: requireProviderKey("GROQ_API_KEY", "Groq") };
+    case "google":
+      return { id: `google/${env.GOOGLE_MODEL}`, apiKey: requireProviderKey("GOOGLE_API_KEY", "Google") };
+    case "deepseek":
+      return { id: `deepseek/${env.DEEPSEEK_MODEL}`, apiKey: requireProviderKey("DEEPSEEK_API_KEY", "DeepSeek") };
+    case "openai":
+    default:
+      return { id: `openai/${env.OPENAI_MODEL}`, apiKey: requireProviderKey("OPENAI_API_KEY", "OpenAI") };
+  }
+};

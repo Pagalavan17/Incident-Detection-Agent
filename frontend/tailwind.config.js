@@ -8,9 +8,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          primary: "#4F46E5",   // Indigo
+          secondary: "#6366F1", // Light Indigo
+          accent: "#3B82F6",    // Bright Blue
+          neon: "#00D9FF",      // Cyan Neon
+          purple: "#8B5CF6",    // Purple
+        },
         cyber: {
           bg: {
-            dark: "#0b0f19",
+            dark: "#070B14",
             light: "#f8fafc",
           },
           panel: {
@@ -18,26 +25,37 @@ export default {
             light: "#ffffff",
           },
           border: {
-            dark: "#1f2937",
+            dark: "rgba(255,255,255,0.08)",
             light: "#e2e8f0",
           },
           primary: {
-            DEFAULT: "#3b82f6",
-            dark: "#60a5fa",
-            light: "#2563eb",
+            DEFAULT: "#4F46E5",
+            dark: "#6366F1",
+            light: "#4F46E5",
           },
-          accent: "#06b6d4", // Cyan
-          success: "#10b981", // Emerald
-          warning: "#f59e0b", // Amber
-          danger: "#ef4444", // Red
+          accent: "#3B82F6",
+          success: "#22C55E",
+          warning: "#F59E0B",
+          danger: "#EF4444",
           muted: {
             dark: "#9ca3af",
             light: "#64748b",
           }
+        },
+        text: {
+          primary: "#FFFFFF",
+          secondary: "#D1D5DB",
+          muted: "#9CA3AF",
+          dim: "#6B7280",
         }
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        mono: ["Fira Code", "Monaco", "Courier New", "monospace"],
+      },
+      boxShadow: {
+        glow: "0 0 24px rgba(79, 70, 229, 0.25)",
+        glowCyan: "0 0 24px rgba(0, 217, 255, 0.2)",
       }
     },
   },

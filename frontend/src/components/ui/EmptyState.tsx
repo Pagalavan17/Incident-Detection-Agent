@@ -29,7 +29,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionPath && actionText && (
         <Link
           to={actionPath}
-          className="inline-flex items-center px-4 py-2 text-xs font-semibold bg-cyber-primary hover:bg-cyber-primary/95 text-white border border-cyber-primary font-mono tracking-wider transition-all"
+          className="inline-flex items-center px-4 py-2 text-xs font-semibold bg-cyber-primary hover:bg-cyber-primary/95 text-white border border-cyber-primary font-mono tracking-wider transition-all cursor-pointer pointer-events-auto relative z-10"
         >
           <Plus size={14} className="mr-1.5" />
           {actionText}

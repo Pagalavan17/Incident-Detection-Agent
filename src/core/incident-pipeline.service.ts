@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/core/incident-pipeline.service.ts
  *
  * PURPOSE:
@@ -154,6 +154,14 @@ export interface CompleteIncidentResponse {
    * Undefined if the post-mortem step did not run or failed.
    */
   readonly postMortem?: PostMortemReport | undefined;
+
+  /**
+   * Errors encountered during non-fatal steps or when skipped due to missing dependencies.
+   */
+  readonly stepErrors?: Readonly<Partial<Record<
+    "retrieval" | "rootCause" | "remediation" | "guardrails" | "postMortem",
+    AppError
+  >>> | undefined;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -321,65 +329,75 @@ export class IncidentPipelineService {
       : [];
 
     // ── Step 6: Root Cause Analysis ────────────────────────────────────────────
+    const stepErrors: Partial<Record<"retrieval" | "rootCause" | "remediation" | "guardrails" | "postMortem", AppError>> = {};
+    if (!retrievalResult.success) {
+      stepErrors.retrieval = retrievalResult.error;
+    }
+
+    let rootCause: RootCauseAnalysis | undefined = undefined;
     const rcaResult = await this.rootCauseSvc.analyzeRootCause(
       incidentContext,
       retrieval
     );
 
     if (!rcaResult.success) {
-      return ok({ incident: incidentContext, anomalies, historicalMatches });
+      stepErrors.rootCause = rcaResult.error;
+    } else {
+      rootCause = rcaResult.data;
     }
-
-    const rootCause: RootCauseAnalysis = rcaResult.data;
 
     // ── Step 7: Remediation Recommendation ────────────────────────────────────
-    const remediationResult = await this.remediationSvc.recommendRemediation(
-      incidentContext,
-      rootCause
-    );
+    let remediation: RemediationPlan | undefined = undefined;
+    if (rootCause === undefined) {
+      stepErrors.remediation = makeError("PIPELINE_STEP_FAILED", "Skipped remediation because root cause analysis failed or was missing.", { context: { reason: "missing_dependency" } });
+    } else {
+      const remediationResult = await this.remediationSvc.recommendRemediation(
+        incidentContext,
+        rootCause
+      );
 
-    if (!remediationResult.success) {
-      return ok({ incident: incidentContext, anomalies, historicalMatches, rootCause });
+      if (!remediationResult.success) {
+        stepErrors.remediation = remediationResult.error;
+      } else {
+        remediation = remediationResult.data;
+      }
     }
-
-    const remediation: RemediationPlan = remediationResult.data;
 
     // ── Step 8: Guardrails Validation ──────────────────────────────────────────
-    const guardrailsResult = await this.guardrailsSvc.validateOutputs(
-      incidentContext,
-      rootCause,
-      remediation
-    );
-
-    if (!guardrailsResult.success) {
-      return ok({
-        incident: incidentContext,
-        anomalies,
-        historicalMatches,
+    let guardrails: ValidationResult | undefined = undefined;
+    if (rootCause === undefined || remediation === undefined) {
+      stepErrors.guardrails = makeError("PIPELINE_STEP_FAILED", "Skipped guardrails validation because root cause or remediation was missing.", { context: { reason: "missing_dependency" } });
+    } else {
+      const guardrailsResult = await this.guardrailsSvc.validateOutputs(
+        incidentContext,
         rootCause,
-        remediation,
-      });
+        remediation
+      );
+
+      if (!guardrailsResult.success) {
+        stepErrors.guardrails = guardrailsResult.error;
+      } else {
+        guardrails = guardrailsResult.data;
+      }
     }
 
-    const guardrails: ValidationResult = guardrailsResult.data;
-
     // ── Step 9: Post-Mortem Generation ─────────────────────────────────────────
-    const postMortemResult = await this.postMortemSvc.generatePostMortem(
-      incidentContext,
-      rootCause,
-      remediation,
-      guardrails
-    );
-
-    if (!postMortemResult.success) {
-      return ok({
-        incident: incidentContext,
-        anomalies,
-        historicalMatches,
+    let postMortem: PostMortemReport | undefined = undefined;
+    if (rootCause === undefined || remediation === undefined || guardrails === undefined) {
+      stepErrors.postMortem = makeError("PIPELINE_STEP_FAILED", "Skipped post-mortem generation because prerequisite steps failed or were missing.", { context: { reason: "missing_dependency" } });
+    } else {
+      const postMortemResult = await this.postMortemSvc.generatePostMortem(
+        incidentContext,
         rootCause,
         remediation,
-        guardrails,
-      });
+        guardrails
+      );
+
+      if (!postMortemResult.success) {
+        stepErrors.postMortem = postMortemResult.error;
+      } else {
+        postMortem = postMortemResult.data;
+      }
     }
 
     // ── Complete pipeline ───────────────────────────────────────────────────────
@@ -390,8 +408,27 @@ export class IncidentPipelineService {
       rootCause,
       remediation,
       guardrails,
-      postMortem: postMortemResult.data,
+      postMortem,
+      stepErrors: Object.keys(stepErrors).length > 0 ? stepErrors : undefined,
     });
+  }
+
+  // ── Debug / Pass-through Endpoints ──────────────────────────────────────────
+
+  public async runRootCauseOnly(context: IncidentContext, retrieval: RetrievalResult): Promise<Result<RootCauseAnalysis, AppError>> {
+    return this.rootCauseSvc.analyzeRootCause(context, retrieval);
+  }
+
+  public async runRemediationOnly(context: IncidentContext, rootCause: RootCauseAnalysis): Promise<Result<RemediationPlan, AppError>> {
+    return this.remediationSvc.recommendRemediation(context, rootCause);
+  }
+
+  public async runGuardrailsOnly(context: IncidentContext, rootCause: RootCauseAnalysis, remediation: RemediationPlan): Promise<Result<ValidationResult, AppError>> {
+    return this.guardrailsSvc.validateOutputs(context, rootCause, remediation);
+  }
+
+  public async runPostMortemOnly(context: IncidentContext, rootCause: RootCauseAnalysis, remediation: RemediationPlan, guardrails: ValidationResult): Promise<Result<PostMortemReport, AppError>> {
+    return this.postMortemSvc.generatePostMortem(context, rootCause, remediation, guardrails);
   }
 }
 

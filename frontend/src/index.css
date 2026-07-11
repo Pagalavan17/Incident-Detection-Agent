@@ -1,10 +1,14 @@
+@import "./styles/globals.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html, body, #root {
-    @apply h-full min-h-screen overflow-x-hidden;
+  html,
+  body,
+  #root {
+    @apply h-full overflow-hidden;
   }
 
   /* Custom high-contrast cybersecurity borders and panel overlays */

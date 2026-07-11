@@ -104,6 +104,12 @@ export interface SimilarIncident {
   readonly occurredAt: string;
 }
 
+export interface RetrievalResult {
+  readonly queryIncidentId: string;
+  readonly matches: ReadonlyArray<SimilarIncident>;
+  readonly searchedAt: string;
+}
+
 export interface RootCauseAnalysis {
   readonly probableCause: string;
   readonly confidence: number;
@@ -221,6 +227,10 @@ export interface CompleteIncidentResponse {
   readonly remediation: RemediationPlan | null;
   readonly guardrails: ValidationResult | null;
   readonly postMortem: PostMortemReport | null;
+  readonly stepErrors?: Readonly<Partial<Record<
+    "retrieval" | "rootCause" | "remediation" | "guardrails" | "postMortem",
+    AppError
+  >>> | undefined;
 }
 
 // HTTP Response Envelope
