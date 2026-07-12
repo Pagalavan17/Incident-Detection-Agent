@@ -18,7 +18,7 @@ export const HealthContextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [lastChecked, setLastChecked] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshHealth = async () => {
     try {

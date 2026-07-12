@@ -68,5 +68,5 @@ test-results/
 *.snap
 
 # ─── 8. Application Logs ──────────────────────────────────────────────────────
-logs/
+/logs/
 *.log
