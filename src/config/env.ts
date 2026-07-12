@@ -381,7 +381,6 @@ export const isTracingEnabled = (): boolean =>
  * so callers (the 4 agent files) can catch it identically to today.
  */
 export const resolveActiveLLM = (): { id: `${string}/${string}`; apiKey: string } => {
-  console.log(`[DEBUG resolveActiveLLM] env.GROQ_MODEL: ${env.GROQ_MODEL}, process.env.GROQ_MODEL: ${process.env.GROQ_MODEL}`);
   switch (env.LLM_PROVIDER) {
     case "anthropic":
       return { id: `anthropic/${env.ANTHROPIC_MODEL}`, apiKey: requireProviderKey("ANTHROPIC_API_KEY", "Anthropic") };
