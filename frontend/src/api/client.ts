@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import axios from "axios";
 import { API_VERSION } from "./config";
 import type {
@@ -15,6 +16,7 @@ import type {
 
 // Create Axios Client
 export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "",
   headers: {
     "Content-Type": "application/json",
   },

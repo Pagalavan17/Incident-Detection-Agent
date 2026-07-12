@@ -145,7 +145,7 @@ export const Settings: React.FC = () => {
                     </div>
                     <div className="flex flex-col space-y-1.5 text-xs">
                       <label className="text-text-muted">Qdrant Vector Server URL</label>
-                      <input type="text" defaultValue="http://localhost:6333" className="bg-[#070B14] border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-brand-neon" />
+                      <input type="text" defaultValue="https://qdrant.your-server.internal:6333" className="bg-[#070B14] border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-brand-neon" />
                     </div>
                   </div>
                 </motion.div>
