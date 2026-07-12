@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/index.ts — Application Entry Point
  *
  * PURPOSE:
@@ -24,4 +24,21 @@ process.on("uncaughtException", (error: Error) => {
   process.exit(1);
 });
 
-startServer();
+import { collectionManager } from "./services/qdrant/collection-manager";
+import { QdrantCollections } from "./constants/qdrant.constants";
+
+async function bootstrap() {
+  console.log("[bootstrap] Initializing Qdrant collections...");
+  for (const collectionName of Object.values(QdrantCollections)) {
+    const result = await collectionManager.createCollectionIfAbsent(collectionName);
+    if (!result.success) {
+      console.error(`[bootstrap] Failed to initialize collection ${collectionName}:`, result.error);
+      process.exit(1);
+    }
+    console.log(`[bootstrap] Verified collection: ${collectionName}`);
+  }
+  
+  startServer();
+}
+
+bootstrap();
